@@ -1,0 +1,31 @@
+Milestone,Title,Description
+Phase 1,Task 1.1 - Create Project,Initialize Go module and repository structure
+Phase 1,Task 1.2 - Select Weather API,Choose and integrate weather provider
+Phase 1,Task 1.3 - Build Weather Model,Create weather observation model and parsing
+Phase 1,Task 1.4 - Poll Weather Data,Implement scheduled collection
+Phase 2,Task 2.1 - Install Prometheus Client,Add Prometheus client library
+Phase 2,Task 2.2 - Create Gauges,Add weather gauge metrics
+Phase 2,Task 2.3 - Create Counters,Add request and error counters
+Phase 2,Task 2.4 - Expose Metrics Endpoint,Expose /metrics
+Phase 3,Task 3.1 - Docker Compose,Deploy Prometheus and Grafana
+Phase 3,Task 3.2 - Configure Scraping,Configure Prometheus scrape jobs
+Phase 3,Task 3.3 - Validate Metrics,Verify metric ingestion
+Phase 4,Task 4.1 - Configure Datasource,Add Prometheus datasource
+Phase 4,Task 4.2 - Create Dashboard,Build dashboard panels
+Phase 4,Task 4.3 - Add Variables,Add city/environment variables
+Phase 4,Task 4.4 - Add Thresholds,Configure dashboard thresholds
+Phase 5,Task 5.1 - Structured Logging,Integrate structured logging
+Phase 5,Task 5.2 - Deploy Loki,Deploy Loki
+Phase 5,Task 5.3 - Deploy Promtail,Deploy Promtail
+Phase 5,Task 5.4 - Log Dashboard,Build Grafana log dashboards
+Phase 6,Task 6.1 - Install OpenTelemetry,Integrate OTel SDK
+Phase 6,Task 6.2 - Create Spans,Add tracing spans
+Phase 6,Task 6.3 - Deploy Tempo,Deploy Tempo and collector
+Phase 6,Task 6.4 - Export Traces,Export traces to Tempo
+Phase 7,Task 7.1 - Correlate Signals,"Link metrics, logs, traces"
+Phase 7,Task 7.2 - Trace IDs in Logs,Add trace IDs
+Phase 7,Task 7.3 - Incident Dashboard,Create troubleshooting dashboard
+Phase 8,Option A - Multi-City Monitoring,Support multiple cities
+Phase 8,Option B - Forecast Accuracy,Compare forecast vs actual
+Phase 8,Option C - Severe Weather Alerts,Track alerts
+Phase 8,Option D - Air Quality,Track AQI and pollen
