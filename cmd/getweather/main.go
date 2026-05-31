@@ -5,63 +5,28 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"strconv"
+	"strings"
 	"time"
 )
-
-type Forecast struct {
-	Context    any           `json:"@context"`
-	ID         string        `json:"id"`
-	Type       string        `json:"type"`
-	Geometry   Geometry      `json:"geometry"`
-	Properties ForecastProps `json:"properties"`
-}
-
-type Geometry struct {
-	Type        string    `json:"type"`
-	Coordinates any       `json:"coordinates"`
-	BBox        []float64 `json:"bbox"`
-}
-
-type QuantitativeValue struct {
-	Value          float64 `json:"value"`
-	MaxValue       float64 `json:"maxValue"`
-	MinValue       float64 `json:"minValue"`
-	UnitCode       string  `json:"unitCode"`
-	QualityControl string  `json:"qualityControl"`
-}
-
-type ForecastPeriod struct {
-	Number                     int               `json:"number"`
-	Name                       string            `json:"name"`
-	StartTime                  time.Time         `json:"startTime"`
-	EndTime                    time.Time         `json:"endTime"`
-	IsDaytime                  bool              `json:"isDaytime"`
-	Temperature                any               `json:"temperature"`
-	TemperatureTrend           string            `json:"temperatureTrend"`
-	ProbabilityOfPrecipitation QuantitativeValue `json:"probabilityOfPrecipitation"`
-	WindSpeed                  any               `json:"windSpeed"`
-}
-
-type ForecastProps struct {
-	Context           any               `json:"@context"`
-	Geometry          string            `json:"geometry"`
-	Units             string            `json:"units"`
-	ForecastGenerator string            `json:"forecastGenerator"`
-	GeneratedAt       time.Time         `json:"generatedAt"`
-	UpdateTime        time.Time         `json:"updateTime"`
-	ValidTimes        string            `json:"validTimes"`
-	Elevation         QuantitativeValue `json:"elevation"`
-	Periods           []ForecastPeriod  `json:"periods"`
-}
 
 type NWSConfig struct {
 	BaseURL        string
 	GridX          string
 	GridY          string
 	ForecastOffice string
+	StationID      string
 }
 
-type WeatherData struct {
+type CurrentWeatherData struct {
+	Temperature    float64
+	Humidity       float64
+	Windspeed      any
+	ChanceOfPrecip bool
+	Timestamp      string
+}
+
+type ForecastWeatherData struct {
 	Temperature    any
 	Humidity       float64
 	Windspeed      any
@@ -70,7 +35,33 @@ type WeatherData struct {
 	Timestamp      time.Time
 }
 
-func GetCurrentWeather() (*WeatherData, error) {
+func (n NWSConfig) GetCurrentData() (*CurrentWeatherData, error) {
+	var currentData Observation
+	slog.Info("getting current weather data", "station", n.StationID)
+	resp, err := http.Get(n.BaseURL + "/stations/" + n.StationID + "/observations/latest")
+	if err != nil {
+		slog.Error("error fetching latest observation data", "error", err)
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("unexpected response code: %d", resp.StatusCode)
+	}
+	if err = json.NewDecoder(resp.Body).Decode(&currentData); err != nil {
+		slog.Error("error decoding response stream", "error", err)
+		return nil, err
+	}
+
+	return &CurrentWeatherData{
+		Temperature: currentData.Properties.Temperature.Value, // Returns in Celcius
+		Humidity:    currentData.Properties.RelativeHumidity.Value,
+		Windspeed:   currentData.Properties.WindSpeed.Value,
+		Timestamp:   currentData.Properties.Timestamp,
+	}, nil
+
+}
+
+func (n NWSConfig) GetForecastData() (*ForecastWeatherData, error) {
 	var result Forecast
 
 	cfg := NWSConfig{
@@ -79,7 +70,7 @@ func GetCurrentWeather() (*WeatherData, error) {
 		GridY:          "84",
 		ForecastOffice: "MPX",
 	}
-	slog.Info("getting weather update")
+	slog.Info("getting forecast data")
 	resp, err := http.Get(cfg.BaseURL + "/gridpoints/" + cfg.ForecastOffice + "/" + cfg.GridX + "," + cfg.GridY + "/forecast")
 	if err != nil {
 		slog.Error("error calling weather service api", "error", err)
@@ -95,7 +86,7 @@ func GetCurrentWeather() (*WeatherData, error) {
 		slog.Error("failed to read response body", "error", err)
 		return nil, err
 	}
-	return &WeatherData{
+	return &ForecastWeatherData{
 		Temperature:   result.Properties.Periods[0].Temperature,
 		Windspeed:     result.Properties.Periods[0].WindSpeed,
 		Timestamp:     result.Properties.Periods[0].EndTime,
@@ -104,11 +95,33 @@ func GetCurrentWeather() (*WeatherData, error) {
 }
 
 func main() {
-	weather, err := GetCurrentWeather()
+	nws := NWSConfig{
+		BaseURL:        "https://api.weather.gov",
+		GridX:          "102",
+		GridY:          "84",
+		ForecastOffice: "MPX",
+		StationID:      "KANE",
+	}
+	ForecastedWeather, err := nws.GetForecastData()
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf("Your forecasted weather for %v \nTemp: %v F\n", weather.Timestamp, weather.Temperature)
-	fmt.Println("Windspeed: ", weather.Windspeed)
-	fmt.Println("Chance of Precipitation: ", weather.PrecipPercent)
+	fmt.Printf("Your forecasted weather for %v \nTemp: %v F\n", ForecastedWeather.Timestamp, ForecastedWeather.Temperature)
+	fmt.Println("Windspeed: ", ForecastedWeather.Windspeed)
+	fmt.Println("Chance of Precipitation: ", ForecastedWeather.PrecipPercent)
+	CurrentWeather, err := nws.GetCurrentData()
+	if err != nil {
+		slog.Error("error", "error", err)
+		panic(err)
+	}
+	// Convert temps
+	tempF, err := ConvertCelciusToFahrenheit(CurrentWeather.Temperature)
+	if err != nil {
+		slog.Error("error converting values", "error", err)
+	}
+	fmt.Print(strings.Repeat("#", 30))
+	fmt.Printf("\nCurrent weather for %v \n", CurrentWeather.Timestamp)
+	fmt.Printf("Current Temp: %v F\n", tempF)
+	fmt.Printf("Current Windspeed: %v km/h\n", CurrentWeather.Windspeed)
+	fmt.Printf("Current Humidity: %v Percent\n", strconv.FormatFloat(CurrentWeather.Humidity, 'f', 2, 64))
 }
