@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"os"
 	"strconv"
-	"strings"
 	"time"
 )
 
@@ -134,21 +133,26 @@ func WriteCsv(d CurrentWeatherData) error {
 	return err
 }
 
+func PrintToConsole(d CurrentWeatherData) error {
+	tempF, err := ConvertCelciusToFahrenheit(d.Temperature)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("\nCurrent weather for %v \n", d.Timestamp)
+	fmt.Printf("Current Temp: %v F\n", tempF)
+	fmt.Printf("Current Windspeed: %v km/h\n", d.Windspeed)
+	fmt.Printf("Current Humidity: %v Percent\n", strconv.FormatFloat(d.Humidity, 'f', 2, 64))
+	return err
+}
+
 func main() {
 	nws := NWSConfig{
 		BaseURL:        "https://api.weather.gov",
 		GridX:          "102",
 		GridY:          "84",
-		ForecastOffice: "MPX",
-		StationID:      "KANE",
+		ForecastOffice: "MPX",  // Minneapolis
+		StationID:      "KANE", // Anoka/Blaine Airport
 	}
-	ForecastedWeather, err := nws.GetForecastData()
-	if err != nil {
-		panic(err)
-	}
-	fmt.Printf("Your forecasted weather for %v \nTemp: %v F\n", ForecastedWeather.Timestamp, ForecastedWeather.Temperature)
-	fmt.Println("Windspeed: ", ForecastedWeather.Windspeed)
-	fmt.Println("Chance of Precipitation: ", ForecastedWeather.PrecipPercent)
 	CurrentWeather, err := nws.GetCurrentData()
 	if err != nil {
 		slog.Error("error", "error", err)
@@ -157,14 +161,8 @@ func main() {
 	if err := WriteCsv(*CurrentWeather); err != nil {
 		log.Fatal(err)
 	}
-	// Convert temps
-	tempF, err := ConvertCelciusToFahrenheit(CurrentWeather.Temperature)
-	if err != nil {
-		slog.Error("error converting values", "error", err)
+
+	if err := PrintToConsole(*CurrentWeather); err != nil {
+		slog.Error("error printing to console", "error", err)
 	}
-	fmt.Print(strings.Repeat("#", 30))
-	fmt.Printf("\nCurrent weather for %v \n", CurrentWeather.Timestamp)
-	fmt.Printf("Current Temp: %v F\n", tempF)
-	fmt.Printf("Current Windspeed: %v km/h\n", CurrentWeather.Windspeed)
-	fmt.Printf("Current Humidity: %v Percent\n", strconv.FormatFloat(CurrentWeather.Humidity, 'f', 2, 64))
 }
