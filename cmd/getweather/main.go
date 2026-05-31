@@ -43,7 +43,11 @@ func (n NWSConfig) GetCurrentData() (*CurrentWeatherData, error) {
 		slog.Error("error fetching latest observation data", "error", err)
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			slog.Error("error closing stream", "error", err)
+		}
+	}()
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("unexpected response code: %d", resp.StatusCode)
 	}
@@ -76,7 +80,11 @@ func (n NWSConfig) GetForecastData() (*ForecastWeatherData, error) {
 		slog.Error("error calling weather service api", "error", err)
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			slog.Error("error closing stream", "error", err)
+		}
+	}()
 	if resp.StatusCode != http.StatusOK {
 		slog.Error("non-200 response from upstread", "status_code", resp.StatusCode)
 		return nil, fmt.Errorf("unexpected status code %d", resp.StatusCode)
