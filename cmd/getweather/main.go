@@ -151,7 +151,7 @@ func main() {
 		GridX:          "102",
 		GridY:          "84",
 		ForecastOffice: "MPX",  // Minneapolis
-		StationID:      "KANE", // Anoka/Blaine Airport
+		StationID:      "KSTP", // St. Paul
 	}
 	CurrentWeather, err := nws.GetCurrentData()
 	if err != nil {
