@@ -1,0 +1,127 @@
+package main
+
+import (
+	"encoding/json"
+	"fmt"
+	"log/slog"
+	"net/http"
+	"strconv"
+	"strings"
+	"time"
+)
+
+type NWSConfig struct {
+	BaseURL        string
+	GridX          string
+	GridY          string
+	ForecastOffice string
+	StationID      string
+}
+
+type CurrentWeatherData struct {
+	Temperature    float64
+	Humidity       float64
+	Windspeed      any
+	ChanceOfPrecip bool
+	Timestamp      string
+}
+
+type ForecastWeatherData struct {
+	Temperature    any
+	Humidity       float64
+	Windspeed      any
+	ChanceOfPrecip bool
+	PrecipPercent  any
+	Timestamp      time.Time
+}
+
+func (n NWSConfig) GetCurrentData() (*CurrentWeatherData, error) {
+	var currentData Observation
+	slog.Info("getting current weather data", "station", n.StationID)
+	resp, err := http.Get(n.BaseURL + "/stations/" + n.StationID + "/observations/latest")
+	if err != nil {
+		slog.Error("error fetching latest observation data", "error", err)
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("unexpected response code: %d", resp.StatusCode)
+	}
+	if err = json.NewDecoder(resp.Body).Decode(&currentData); err != nil {
+		slog.Error("error decoding response stream", "error", err)
+		return nil, err
+	}
+
+	return &CurrentWeatherData{
+		Temperature: currentData.Properties.Temperature.Value, // Returns in Celcius
+		Humidity:    currentData.Properties.RelativeHumidity.Value,
+		Windspeed:   currentData.Properties.WindSpeed.Value,
+		Timestamp:   currentData.Properties.Timestamp,
+	}, nil
+
+}
+
+func (n NWSConfig) GetForecastData() (*ForecastWeatherData, error) {
+	var result Forecast
+
+	cfg := NWSConfig{
+		BaseURL:        "https://api.weather.gov",
+		GridX:          "102",
+		GridY:          "84",
+		ForecastOffice: "MPX",
+	}
+	slog.Info("getting forecast data")
+	resp, err := http.Get(cfg.BaseURL + "/gridpoints/" + cfg.ForecastOffice + "/" + cfg.GridX + "," + cfg.GridY + "/forecast")
+	if err != nil {
+		slog.Error("error calling weather service api", "error", err)
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		slog.Error("non-200 response from upstread", "status_code", resp.StatusCode)
+		return nil, fmt.Errorf("unexpected status code %d", resp.StatusCode)
+	}
+	err = json.NewDecoder(resp.Body).Decode(&result)
+	if err != nil {
+		slog.Error("failed to read response body", "error", err)
+		return nil, err
+	}
+	return &ForecastWeatherData{
+		Temperature:   result.Properties.Periods[0].Temperature,
+		Windspeed:     result.Properties.Periods[0].WindSpeed,
+		Timestamp:     result.Properties.Periods[0].EndTime,
+		PrecipPercent: result.Properties.Periods[0].ProbabilityOfPrecipitation.Value,
+	}, nil
+}
+
+func main() {
+	nws := NWSConfig{
+		BaseURL:        "https://api.weather.gov",
+		GridX:          "102",
+		GridY:          "84",
+		ForecastOffice: "MPX",
+		StationID:      "KANE",
+	}
+	ForecastedWeather, err := nws.GetForecastData()
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("Your forecasted weather for %v \nTemp: %v F\n", ForecastedWeather.Timestamp, ForecastedWeather.Temperature)
+	fmt.Println("Windspeed: ", ForecastedWeather.Windspeed)
+	fmt.Println("Chance of Precipitation: ", ForecastedWeather.PrecipPercent)
+	CurrentWeather, err := nws.GetCurrentData()
+	if err != nil {
+		slog.Error("error", "error", err)
+		panic(err)
+	}
+	// Convert temps
+	tempF, err := ConvertCelciusToFahrenheit(CurrentWeather.Temperature)
+	if err != nil {
+		slog.Error("error converting values", "error", err)
+	}
+	fmt.Print(strings.Repeat("#", 30))
+	fmt.Printf("\nCurrent weather for %v \n", CurrentWeather.Timestamp)
+	fmt.Printf("Current Temp: %v F\n", tempF)
+	fmt.Printf("Current Windspeed: %v km/h\n", CurrentWeather.Windspeed)
+	fmt.Printf("Current Humidity: %v Percent\n", strconv.FormatFloat(CurrentWeather.Humidity, 'f', 2, 64))
+}
