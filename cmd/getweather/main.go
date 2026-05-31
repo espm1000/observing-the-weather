@@ -1,10 +1,13 @@
 package main
 
 import (
+	"encoding/csv"
 	"encoding/json"
 	"fmt"
+	"log"
 	"log/slog"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -102,6 +105,35 @@ func (n NWSConfig) GetForecastData() (*ForecastWeatherData, error) {
 	}, nil
 }
 
+func WriteCsv(d CurrentWeatherData) error {
+	var reportData []CurrentWeatherData
+	headers := []string{"timestamp", "temperature", "humidity"}
+	report, err := os.Create("currentWeather.csv")
+	if err != nil {
+		slog.Error("failed to create file", "error", err)
+		return err
+	}
+	defer report.Close()
+	writer := csv.NewWriter(report)
+	defer writer.Flush()
+	if err := writer.Write(headers); err != nil {
+		slog.Error("error writing headers", "error", err)
+		return err
+	}
+	reportData = append(reportData, d)
+	for _, data := range reportData {
+		row := []string{
+			data.Timestamp,
+			strconv.FormatFloat(data.Temperature, 'f', 2, 64),
+			strconv.FormatFloat(data.Humidity, 'f', 2, 64),
+		}
+		if err := writer.Write(row); err != nil {
+			return err
+		}
+	}
+	return err
+}
+
 func main() {
 	nws := NWSConfig{
 		BaseURL:        "https://api.weather.gov",
@@ -121,6 +153,9 @@ func main() {
 	if err != nil {
 		slog.Error("error", "error", err)
 		panic(err)
+	}
+	if err := WriteCsv(*CurrentWeather); err != nil {
+		log.Fatal(err)
 	}
 	// Convert temps
 	tempF, err := ConvertCelciusToFahrenheit(CurrentWeather.Temperature)
