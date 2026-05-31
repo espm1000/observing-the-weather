@@ -88,7 +88,7 @@ func GetCurrentWeather() (*WeatherData, error) {
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		slog.Error("non-200 response from upstread", "status_code", resp.StatusCode)
-		return nil, err
+		return nil, fmt.Errorf("unexpected status code %d", resp.StatusCode)
 	}
 	err = json.NewDecoder(resp.Body).Decode(&result)
 	if err != nil {
