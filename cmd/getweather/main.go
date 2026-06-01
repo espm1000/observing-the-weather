@@ -104,21 +104,45 @@ func (n NWSConfig) GetForecastData() (*ForecastWeatherData, error) {
 	}, nil
 }
 
+func InitCsv() error {
+	headers := []string{"timestamp", "temperature", "humidity"}
+	_, err := os.Stat("currentWeather.csv")
+	if err == nil {
+		fmt.Println("report file exists")
+		return err
+	}
+	file, err := os.Create("currentWeather.csv")
+	if err != nil {
+		slog.Error("error creating current report file", "error", err)
+		return err
+	}
+	writer := csv.NewWriter(file)
+	defer writer.Flush()
+	writer.Write(headers)
+	return err
+}
+
 func WriteCsv(d CurrentWeatherData) error {
 	var reportData []CurrentWeatherData
-	headers := []string{"timestamp", "temperature", "humidity"}
-	report, err := os.Create("currentWeather.csv")
+	// headers := []string{"timestamp", "temperature", "humidity"}
+	// report, err := os.Create("currentWeather.csv")
+	// if err != nil {
+	// 	slog.Error("failed to create file", "error", err)
+	// 	return err
+	// }
+	// defer report.Close()
+	report, err := os.OpenFile("currentWeather.csv", os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
-		slog.Error("failed to create file", "error", err)
+		InitCsv()
 		return err
 	}
 	defer report.Close()
 	writer := csv.NewWriter(report)
 	defer writer.Flush()
-	if err := writer.Write(headers); err != nil {
-		slog.Error("error writing headers", "error", err)
-		return err
-	}
+	// if err := writer.Write(headers); err != nil {
+	// 	slog.Error("error writing headers", "error", err)
+	// 	return err
+	// }
 	reportData = append(reportData, d)
 	for _, data := range reportData {
 		row := []string{
@@ -162,7 +186,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	if err := PrintToConsole(*CurrentWeather); err != nil {
-		slog.Error("error printing to console", "error", err)
-	}
+	// if err := PrintToConsole(*CurrentWeather); err != nil {
+	// 	slog.Error("error printing to console", "error", err)
+	// }
 }
