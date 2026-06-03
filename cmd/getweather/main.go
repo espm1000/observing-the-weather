@@ -128,13 +128,6 @@ func InitCsv() error {
 
 func WriteCsv(d CurrentWeatherData) error {
 	var reportData []CurrentWeatherData
-	// headers := []string{"timestamp", "temperature", "humidity"}
-	// report, err := os.Create("currentWeather.csv")
-	// if err != nil {
-	// 	slog.Error("failed to create file", "error", err)
-	// 	return err
-	// }
-	// defer report.Close()
 	report, err := os.OpenFile("currentWeather.csv", os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
 		slog.Error("file not found, creating empty report file")
@@ -144,10 +137,6 @@ func WriteCsv(d CurrentWeatherData) error {
 	defer report.Close()
 	writer := csv.NewWriter(report)
 	defer writer.Flush()
-	// if err := writer.Write(headers); err != nil {
-	// 	slog.Error("error writing headers", "error", err)
-	// 	return err
-	// }
 	reportData = append(reportData, d)
 	for _, data := range reportData {
 		row := []string{
