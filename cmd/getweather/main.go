@@ -57,9 +57,13 @@ func (n NWSConfig) GetCurrentData() (*CurrentWeatherData, error) {
 		slog.Error("error decoding response stream", "error", err)
 		return nil, err
 	}
+	temp_f, err := ConvertCelciusToFahrenheit(currentData.Properties.Temperature.Value)
+	if err != nil {
+		return nil, err
+	}
 
 	return &CurrentWeatherData{
-		Temperature: currentData.Properties.Temperature.Value, // Returns in Celcius
+		Temperature: temp_f,
 		Humidity:    currentData.Properties.RelativeHumidity.Value,
 		Windspeed:   currentData.Properties.WindSpeed.Value,
 		Timestamp:   currentData.Properties.Timestamp,
@@ -133,8 +137,9 @@ func WriteCsv(d CurrentWeatherData) error {
 	// defer report.Close()
 	report, err := os.OpenFile("currentWeather.csv", os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
+		slog.Error("file not found, creating empty report file")
 		InitCsv()
-		return err
+		report, _ = os.OpenFile("currentWeather.csv", os.O_APPEND|os.O_WRONLY, 0644)
 	}
 	defer report.Close()
 	writer := csv.NewWriter(report)
@@ -154,7 +159,7 @@ func WriteCsv(d CurrentWeatherData) error {
 			return err
 		}
 	}
-	return err
+	return nil
 }
 
 func PrintToConsole(d CurrentWeatherData) error {
