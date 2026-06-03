@@ -122,7 +122,9 @@ func InitCsv() error {
 	}
 	writer := csv.NewWriter(file)
 	defer writer.Flush()
-	writer.Write(headers)
+	if err := writer.Write(headers); err != nil {
+		return err
+	}
 	return err
 }
 
@@ -131,10 +133,16 @@ func WriteCsv(d CurrentWeatherData) error {
 	report, err := os.OpenFile("currentWeather.csv", os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
 		slog.Error("file not found, creating empty report file")
-		InitCsv()
+		if err = InitCsv(); err != nil {
+			return err
+		}
 		report, _ = os.OpenFile("currentWeather.csv", os.O_APPEND|os.O_WRONLY, 0644)
 	}
-	defer report.Close()
+	defer func() {
+		if err := report.Close(); err != nil {
+			slog.Error("error closing report stream")
+		}
+	}()
 	writer := csv.NewWriter(report)
 	defer writer.Flush()
 	reportData = append(reportData, d)
