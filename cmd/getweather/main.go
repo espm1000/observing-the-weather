@@ -1,12 +1,14 @@
 package main
 
 import (
+	"encoding/csv"
 	"encoding/json"
 	"fmt"
+	"log"
 	"log/slog"
 	"net/http"
+	"os"
 	"strconv"
-	"strings"
 	"time"
 )
 
@@ -55,9 +57,13 @@ func (n NWSConfig) GetCurrentData() (*CurrentWeatherData, error) {
 		slog.Error("error decoding response stream", "error", err)
 		return nil, err
 	}
+	temp_f, err := ConvertCelciusToFahrenheit(currentData.Properties.Temperature.Value)
+	if err != nil {
+		return nil, err
+	}
 
 	return &CurrentWeatherData{
-		Temperature: currentData.Properties.Temperature.Value, // Returns in Celcius
+		Temperature: temp_f,
 		Humidity:    currentData.Properties.RelativeHumidity.Value,
 		Windspeed:   currentData.Properties.WindSpeed.Value,
 		Timestamp:   currentData.Properties.Timestamp,
@@ -102,34 +108,87 @@ func (n NWSConfig) GetForecastData() (*ForecastWeatherData, error) {
 	}, nil
 }
 
+func InitCsv() error {
+	headers := []string{"timestamp", "temperature", "humidity"}
+	_, err := os.Stat("currentWeather.csv")
+	if err == nil {
+		fmt.Println("report file exists")
+		return err
+	}
+	file, err := os.Create("currentWeather.csv")
+	if err != nil {
+		slog.Error("error creating current report file", "error", err)
+		return err
+	}
+	writer := csv.NewWriter(file)
+	defer writer.Flush()
+	if err := writer.Write(headers); err != nil {
+		return err
+	}
+	return err
+}
+
+func WriteCsv(d CurrentWeatherData) error {
+	var reportData []CurrentWeatherData
+	report, err := os.OpenFile("currentWeather.csv", os.O_APPEND|os.O_WRONLY, 0644)
+	if err != nil {
+		slog.Error("file not found, creating empty report file")
+		if err = InitCsv(); err != nil {
+			return err
+		}
+		report, _ = os.OpenFile("currentWeather.csv", os.O_APPEND|os.O_WRONLY, 0644)
+	}
+	defer func() {
+		if err := report.Close(); err != nil {
+			slog.Error("error closing report stream")
+		}
+	}()
+	writer := csv.NewWriter(report)
+	defer writer.Flush()
+	reportData = append(reportData, d)
+	for _, data := range reportData {
+		row := []string{
+			data.Timestamp,
+			strconv.FormatFloat(data.Temperature, 'f', 2, 64),
+			strconv.FormatFloat(data.Humidity, 'f', 2, 64),
+		}
+		if err := writer.Write(row); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func PrintToConsole(d CurrentWeatherData) error {
+	tempF, err := ConvertCelciusToFahrenheit(d.Temperature)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("\nCurrent weather for %v \n", d.Timestamp)
+	fmt.Printf("Current Temp: %v F\n", tempF)
+	fmt.Printf("Current Windspeed: %v km/h\n", d.Windspeed)
+	fmt.Printf("Current Humidity: %v Percent\n", strconv.FormatFloat(d.Humidity, 'f', 2, 64))
+	return err
+}
+
 func main() {
 	nws := NWSConfig{
 		BaseURL:        "https://api.weather.gov",
 		GridX:          "102",
 		GridY:          "84",
-		ForecastOffice: "MPX",
-		StationID:      "KANE",
+		ForecastOffice: "MPX",  // Minneapolis
+		StationID:      "KSTP", // St. Paul
 	}
-	ForecastedWeather, err := nws.GetForecastData()
-	if err != nil {
-		panic(err)
-	}
-	fmt.Printf("Your forecasted weather for %v \nTemp: %v F\n", ForecastedWeather.Timestamp, ForecastedWeather.Temperature)
-	fmt.Println("Windspeed: ", ForecastedWeather.Windspeed)
-	fmt.Println("Chance of Precipitation: ", ForecastedWeather.PrecipPercent)
 	CurrentWeather, err := nws.GetCurrentData()
 	if err != nil {
 		slog.Error("error", "error", err)
 		panic(err)
 	}
-	// Convert temps
-	tempF, err := ConvertCelciusToFahrenheit(CurrentWeather.Temperature)
-	if err != nil {
-		slog.Error("error converting values", "error", err)
+	if err := WriteCsv(*CurrentWeather); err != nil {
+		log.Fatal(err)
 	}
-	fmt.Print(strings.Repeat("#", 30))
-	fmt.Printf("\nCurrent weather for %v \n", CurrentWeather.Timestamp)
-	fmt.Printf("Current Temp: %v F\n", tempF)
-	fmt.Printf("Current Windspeed: %v km/h\n", CurrentWeather.Windspeed)
-	fmt.Printf("Current Humidity: %v Percent\n", strconv.FormatFloat(CurrentWeather.Humidity, 'f', 2, 64))
+
+	// if err := PrintToConsole(*CurrentWeather); err != nil {
+	// 	slog.Error("error printing to console", "error", err)
+	// }
 }
