@@ -3,11 +3,13 @@ package main
 import (
 	"encoding/csv"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"log/slog"
 	"net/http"
 	"os"
+	"path"
 	"strconv"
 	"time"
 )
@@ -108,14 +110,14 @@ func (n NWSConfig) GetForecastData() (*ForecastWeatherData, error) {
 	}, nil
 }
 
-func InitCsv() error {
+func InitCsv(dir string) error {
 	headers := []string{"timestamp", "temperature", "humidity"}
-	_, err := os.Stat("currentWeather.csv")
+	_, err := os.Stat(path.Join(dir, "currentWeather.csv"))
 	if err == nil {
 		fmt.Println("report file exists")
 		return err
 	}
-	file, err := os.Create("currentWeather.csv")
+	file, err := os.Create(path.Join(dir, "currentWeather.csv"))
 	if err != nil {
 		slog.Error("error creating current report file", "error", err)
 		return err
@@ -128,15 +130,24 @@ func InitCsv() error {
 	return err
 }
 
-func WriteCsv(d CurrentWeatherData) error {
+func WriteCsv(dir string, d CurrentWeatherData) error {
 	var reportData []CurrentWeatherData
-	report, err := os.OpenFile("currentWeather.csv", os.O_APPEND|os.O_WRONLY, 0644)
+	_, err := os.Stat(dir)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			if err := os.Mkdir(dir, 0755); err != nil {
+				slog.Error("error creating directory", "directory", dir)
+				return err
+			}
+		}
+	}
+	report, err := os.OpenFile(path.Join(dir, "currentWeather.csv"), os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
 		slog.Error("file not found, creating empty report file")
-		if err = InitCsv(); err != nil {
+		if err = InitCsv(dir); err != nil {
 			return err
 		}
-		report, _ = os.OpenFile("currentWeather.csv", os.O_APPEND|os.O_WRONLY, 0644)
+		report, _ = os.OpenFile(path.Join(dir, "currentWeather.csv"), os.O_APPEND|os.O_WRONLY, 0644)
 	}
 	defer func() {
 		if err := report.Close(); err != nil {
@@ -156,6 +167,7 @@ func WriteCsv(d CurrentWeatherData) error {
 			return err
 		}
 	}
+	slog.Info("successful wrote report", "reportPath", dir+"currentWeather.csv")
 	return nil
 }
 
@@ -184,7 +196,7 @@ func main() {
 		slog.Error("error", "error", err)
 		panic(err)
 	}
-	if err := WriteCsv(*CurrentWeather); err != nil {
+	if err := WriteCsv("/data", *CurrentWeather); err != nil {
 		log.Fatal(err)
 	}
 
