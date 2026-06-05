@@ -3,11 +3,13 @@ package main
 import (
 	"encoding/csv"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"log/slog"
 	"net/http"
 	"os"
+	"path"
 	"strconv"
 	"time"
 )
@@ -26,6 +28,7 @@ type CurrentWeatherData struct {
 	Windspeed      any
 	ChanceOfPrecip bool
 	Timestamp      string
+	PrecipLastHour float64
 }
 
 type ForecastWeatherData struct {
@@ -35,6 +38,16 @@ type ForecastWeatherData struct {
 	ChanceOfPrecip bool
 	PrecipPercent  any
 	Timestamp      time.Time
+}
+
+type Environment struct {
+	ReportOutputDir string
+}
+
+func ReadEnvValues() Environment {
+	return Environment{
+		ReportOutputDir: os.Getenv("WEATHER_REPORT_DIR"),
+	}
 }
 
 func (n NWSConfig) GetCurrentData() (*CurrentWeatherData, error) {
@@ -63,10 +76,11 @@ func (n NWSConfig) GetCurrentData() (*CurrentWeatherData, error) {
 	}
 
 	return &CurrentWeatherData{
-		Temperature: temp_f,
-		Humidity:    currentData.Properties.RelativeHumidity.Value,
-		Windspeed:   currentData.Properties.WindSpeed.Value,
-		Timestamp:   currentData.Properties.Timestamp,
+		Temperature:    temp_f,
+		Humidity:       currentData.Properties.RelativeHumidity.Value,
+		Windspeed:      currentData.Properties.WindSpeed.Value,
+		Timestamp:      currentData.Properties.Timestamp,
+		ChanceOfPrecip: false,
 	}, nil
 
 }
@@ -108,14 +122,14 @@ func (n NWSConfig) GetForecastData() (*ForecastWeatherData, error) {
 	}, nil
 }
 
-func InitCsv() error {
-	headers := []string{"timestamp", "temperature", "humidity"}
-	_, err := os.Stat("currentWeather.csv")
+func InitCsv(dir string) error {
+	headers := []string{"timestamp", "temperature", "humidity", "precipchance"}
+	_, err := os.Stat(path.Join(dir, "currentWeather.csv"))
 	if err == nil {
 		fmt.Println("report file exists")
 		return err
 	}
-	file, err := os.Create("currentWeather.csv")
+	file, err := os.Create(path.Join(dir, "currentWeather.csv"))
 	if err != nil {
 		slog.Error("error creating current report file", "error", err)
 		return err
@@ -128,15 +142,24 @@ func InitCsv() error {
 	return err
 }
 
-func WriteCsv(d CurrentWeatherData) error {
+func WriteCsv(dir string, d CurrentWeatherData) error {
 	var reportData []CurrentWeatherData
-	report, err := os.OpenFile("currentWeather.csv", os.O_APPEND|os.O_WRONLY, 0644)
+	_, err := os.Stat(dir)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			if err := os.Mkdir(dir, 0755); err != nil {
+				slog.Error("error creating directory", "directory", dir)
+				return err
+			}
+		}
+	}
+	report, err := os.OpenFile(path.Join(dir, "currentWeather.csv"), os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
 		slog.Error("file not found, creating empty report file")
-		if err = InitCsv(); err != nil {
+		if err = InitCsv(dir); err != nil {
 			return err
 		}
-		report, _ = os.OpenFile("currentWeather.csv", os.O_APPEND|os.O_WRONLY, 0644)
+		report, _ = os.OpenFile(path.Join(dir, "currentWeather.csv"), os.O_APPEND|os.O_WRONLY, 0644)
 	}
 	defer func() {
 		if err := report.Close(); err != nil {
@@ -146,32 +169,45 @@ func WriteCsv(d CurrentWeatherData) error {
 	writer := csv.NewWriter(report)
 	defer writer.Flush()
 	reportData = append(reportData, d)
+	var chanceOfPrecip string
+	if d.ChanceOfPrecip {
+		chanceOfPrecip = "true"
+	} else {
+		chanceOfPrecip = "false"
+	}
 	for _, data := range reportData {
 		row := []string{
 			data.Timestamp,
 			strconv.FormatFloat(data.Temperature, 'f', 2, 64),
 			strconv.FormatFloat(data.Humidity, 'f', 2, 64),
+			chanceOfPrecip,
 		}
 		if err := writer.Write(row); err != nil {
 			return err
 		}
 	}
+	slog.Info("successful wrote report", "reportPath", dir+"currentWeather.csv")
 	return nil
 }
 
-func PrintToConsole(d CurrentWeatherData) error {
-	tempF, err := ConvertCelciusToFahrenheit(d.Temperature)
-	if err != nil {
-		return err
-	}
+func PrintToConsole(d CurrentWeatherData) {
 	fmt.Printf("\nCurrent weather for %v \n", d.Timestamp)
-	fmt.Printf("Current Temp: %v F\n", tempF)
+	fmt.Printf("Current Temp: %v F\n", d.Temperature)
 	fmt.Printf("Current Windspeed: %v km/h\n", d.Windspeed)
 	fmt.Printf("Current Humidity: %v Percent\n", strconv.FormatFloat(d.Humidity, 'f', 2, 64))
-	return err
+	fmt.Printf("Chance of Precip: %v (not implemented)\n", d.ChanceOfPrecip)
 }
 
 func main() {
+	var reportDir string
+	env := ReadEnvValues()
+	if env != (Environment{}) {
+		slog.Info("setting options per environment variables")
+		reportDir = env.ReportOutputDir
+	} else {
+		slog.Info("using default values")
+		reportDir = "/data"
+	}
 	nws := NWSConfig{
 		BaseURL:        "https://api.weather.gov",
 		GridX:          "102",
@@ -184,11 +220,9 @@ func main() {
 		slog.Error("error", "error", err)
 		panic(err)
 	}
-	if err := WriteCsv(*CurrentWeather); err != nil {
+	if err := WriteCsv(reportDir, *CurrentWeather); err != nil {
 		log.Fatal(err)
 	}
 
-	// if err := PrintToConsole(*CurrentWeather); err != nil {
-	// 	slog.Error("error printing to console", "error", err)
-	// }
+	PrintToConsole(*CurrentWeather)
 }
