@@ -39,6 +39,16 @@ type ForecastWeatherData struct {
 	Timestamp      time.Time
 }
 
+type Environment struct {
+	ReportOutputDir string
+}
+
+func ReadEnvValues() Environment {
+	return Environment{
+		ReportOutputDir: os.Getenv("WEATHER_REPORT_DIR"),
+	}
+}
+
 func (n NWSConfig) GetCurrentData() (*CurrentWeatherData, error) {
 	var currentData Observation
 	slog.Info("getting current weather data", "station", n.StationID)
@@ -171,19 +181,23 @@ func WriteCsv(dir string, d CurrentWeatherData) error {
 	return nil
 }
 
-func PrintToConsole(d CurrentWeatherData) error {
-	tempF, err := ConvertCelciusToFahrenheit(d.Temperature)
-	if err != nil {
-		return err
-	}
+func PrintToConsole(d CurrentWeatherData) {
 	fmt.Printf("\nCurrent weather for %v \n", d.Timestamp)
-	fmt.Printf("Current Temp: %v F\n", tempF)
+	fmt.Printf("Current Temp: %v F\n", d.Temperature)
 	fmt.Printf("Current Windspeed: %v km/h\n", d.Windspeed)
 	fmt.Printf("Current Humidity: %v Percent\n", strconv.FormatFloat(d.Humidity, 'f', 2, 64))
-	return err
 }
 
 func main() {
+	var reportDir string
+	env := ReadEnvValues()
+	if env != (Environment{}) {
+		slog.Info("setting options per environment variables")
+		reportDir = env.ReportOutputDir
+	} else {
+		slog.Info("using default values")
+		reportDir = "/data"
+	}
 	nws := NWSConfig{
 		BaseURL:        "https://api.weather.gov",
 		GridX:          "102",
@@ -196,11 +210,9 @@ func main() {
 		slog.Error("error", "error", err)
 		panic(err)
 	}
-	if err := WriteCsv("/data", *CurrentWeather); err != nil {
+	if err := WriteCsv(reportDir, *CurrentWeather); err != nil {
 		log.Fatal(err)
 	}
 
-	// if err := PrintToConsole(*CurrentWeather); err != nil {
-	// 	slog.Error("error printing to console", "error", err)
-	// }
+	PrintToConsole(*CurrentWeather)
 }
