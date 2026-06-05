@@ -28,6 +28,7 @@ type CurrentWeatherData struct {
 	Windspeed      any
 	ChanceOfPrecip bool
 	Timestamp      string
+	PrecipLastHour float64
 }
 
 type ForecastWeatherData struct {
@@ -75,10 +76,11 @@ func (n NWSConfig) GetCurrentData() (*CurrentWeatherData, error) {
 	}
 
 	return &CurrentWeatherData{
-		Temperature: temp_f,
-		Humidity:    currentData.Properties.RelativeHumidity.Value,
-		Windspeed:   currentData.Properties.WindSpeed.Value,
-		Timestamp:   currentData.Properties.Timestamp,
+		Temperature:    temp_f,
+		Humidity:       currentData.Properties.RelativeHumidity.Value,
+		Windspeed:      currentData.Properties.WindSpeed.Value,
+		Timestamp:      currentData.Properties.Timestamp,
+		ChanceOfPrecip: false,
 	}, nil
 
 }
@@ -121,7 +123,7 @@ func (n NWSConfig) GetForecastData() (*ForecastWeatherData, error) {
 }
 
 func InitCsv(dir string) error {
-	headers := []string{"timestamp", "temperature", "humidity"}
+	headers := []string{"timestamp", "temperature", "humidity", "precipchance"}
 	_, err := os.Stat(path.Join(dir, "currentWeather.csv"))
 	if err == nil {
 		fmt.Println("report file exists")
@@ -167,11 +169,18 @@ func WriteCsv(dir string, d CurrentWeatherData) error {
 	writer := csv.NewWriter(report)
 	defer writer.Flush()
 	reportData = append(reportData, d)
+	var chanceOfPrecip string
+	if d.ChanceOfPrecip {
+		chanceOfPrecip = "true"
+	} else {
+		chanceOfPrecip = "false"
+	}
 	for _, data := range reportData {
 		row := []string{
 			data.Timestamp,
 			strconv.FormatFloat(data.Temperature, 'f', 2, 64),
 			strconv.FormatFloat(data.Humidity, 'f', 2, 64),
+			chanceOfPrecip,
 		}
 		if err := writer.Write(row); err != nil {
 			return err
@@ -186,6 +195,7 @@ func PrintToConsole(d CurrentWeatherData) {
 	fmt.Printf("Current Temp: %v F\n", d.Temperature)
 	fmt.Printf("Current Windspeed: %v km/h\n", d.Windspeed)
 	fmt.Printf("Current Humidity: %v Percent\n", strconv.FormatFloat(d.Humidity, 'f', 2, 64))
+	fmt.Printf("Chance of Precip: %v (not implemented)\n", d.ChanceOfPrecip)
 }
 
 func main() {
