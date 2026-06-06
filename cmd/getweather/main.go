@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"log/slog"
 	"net/http"
@@ -43,6 +44,7 @@ type Environment struct {
 	ReportOutputDir      string `env:"WEATHER_REPORT_DIR" envDefault:"/data"`
 	ObservationStationId string `env:"WEATHER_OBSERVATION_STATION_ID" envDefault:"KSTP"`
 	ForecastStationId    string `env:"WEATHER_FORECAST_STATION_ID" envDefault:"MPX"`
+	LogOutput            string `env:"WEATHER_LOG_FILE" envDefault:"weatherlog.json"`
 }
 
 func (n NWSConfig) GetCurrentData() (*CurrentWeatherData, error) {
@@ -53,6 +55,11 @@ func (n NWSConfig) GetCurrentData() (*CurrentWeatherData, error) {
 		slog.Error("error fetching latest observation data", "error", err)
 		return nil, err
 	}
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		slog.Error("error reading response body", "error", err)
+	}
+	slog.Info("response from nws", "response", string(body))
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
 			slog.Error("error closing stream", "error", err)
@@ -104,6 +111,7 @@ func (n NWSConfig) GetForecastData() (*ForecastWeatherData, error) {
 		slog.Error("non-200 response from upstread", "status_code", resp.StatusCode)
 		return nil, fmt.Errorf("unexpected status code %d", resp.StatusCode)
 	}
+
 	err = json.NewDecoder(resp.Body).Decode(&result)
 	if err != nil {
 		slog.Error("failed to read response body", "error", err)
@@ -126,12 +134,17 @@ func PrintToConsole(d CurrentWeatherData) {
 }
 
 func main() {
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-	slog.SetDefault(logger)
 	cfg := Environment{}
 	if err := env.Parse(&cfg); err != nil {
 		slog.Error("failed to parse env vars")
 	}
+	logFile, err := os.OpenFile(cfg.LogOutput, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	if err != nil {
+		slog.Error("error creating log file", "error", err)
+	}
+	// logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	fileLogger := slog.New(slog.NewJSONHandler(logFile, nil))
+	slog.SetDefault(fileLogger)
 	nws := NWSConfig{
 		BaseURL:        "https://api.weather.gov",
 		GridX:          "102",
