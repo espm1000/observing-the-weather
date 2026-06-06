@@ -12,6 +12,8 @@ import (
 	"path"
 	"strconv"
 	"time"
+
+	"github.com/caarlos0/env"
 )
 
 type NWSConfig struct {
@@ -41,18 +43,14 @@ type ForecastWeatherData struct {
 }
 
 type Environment struct {
-	ReportOutputDir string
-}
-
-func ReadEnvValues() Environment {
-	return Environment{
-		ReportOutputDir: os.Getenv("WEATHER_REPORT_DIR"),
-	}
+	ReportOutputDir      string `env:"WEATHER_REPORT_DIR" envDefault:"/data"`
+	ObservationStationId string `env:"WEATHER_OBSERVATION_STATION_ID" envDefault:"KSTP"`
+	ForecastStationId    string `env:"WEATHER_FORECAST_STATION_ID" envDefault:"MPX"`
 }
 
 func (n NWSConfig) GetCurrentData() (*CurrentWeatherData, error) {
 	var currentData Observation
-	slog.Info("getting current weather data", "station", n.StationID)
+	slog.Info("getting current weather data", "observationStation", n.StationID, "forecastOffice", n.ForecastOffice)
 	resp, err := http.Get(n.BaseURL + "/stations/" + n.StationID + "/observations/latest")
 	if err != nil {
 		slog.Error("error fetching latest observation data", "error", err)
@@ -199,28 +197,25 @@ func PrintToConsole(d CurrentWeatherData) {
 }
 
 func main() {
-	var reportDir string
-	env := ReadEnvValues()
-	if env != (Environment{}) {
-		slog.Info("setting options per environment variables")
-		reportDir = env.ReportOutputDir
-	} else {
-		slog.Info("using default values")
-		reportDir = "/data"
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	slog.SetDefault(logger)
+	cfg := Environment{}
+	if err := env.Parse(&cfg); err != nil {
+		slog.Error("failed to parse env vars")
 	}
 	nws := NWSConfig{
 		BaseURL:        "https://api.weather.gov",
 		GridX:          "102",
 		GridY:          "84",
-		ForecastOffice: "MPX",  // Minneapolis
-		StationID:      "KSTP", // St. Paul
+		ForecastOffice: cfg.ForecastStationId,    // Minneapolis
+		StationID:      cfg.ObservationStationId, // St. Paul
 	}
 	CurrentWeather, err := nws.GetCurrentData()
 	if err != nil {
 		slog.Error("error", "error", err)
-		panic(err)
+		log.Fatal(err)
 	}
-	if err := WriteCsv(reportDir, *CurrentWeather); err != nil {
+	if err := WriteCsv(cfg.ReportOutputDir, *CurrentWeather); err != nil {
 		log.Fatal(err)
 	}
 
