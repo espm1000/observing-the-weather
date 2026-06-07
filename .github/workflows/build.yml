@@ -9,7 +9,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  TAG: "dev"
+  TAG: "20260607"
   IMAGE_NAME: "${{ github.repository }}"
   APP_DIR: cmd/getweather/
 

@@ -1,17 +1,15 @@
 package main
 
 import (
-	"encoding/csv"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log"
 	"log/slog"
 	"net/http"
-	"os"
-	"path"
 	"strconv"
 	"time"
+
+	"github.com/caarlos0/env"
 )
 
 type NWSConfig struct {
@@ -41,23 +39,27 @@ type ForecastWeatherData struct {
 }
 
 type Environment struct {
-	ReportOutputDir string
-}
-
-func ReadEnvValues() Environment {
-	return Environment{
-		ReportOutputDir: os.Getenv("WEATHER_REPORT_DIR"),
-	}
+	ReportOutputDir      string `env:"WEATHER_REPORT_DIR" envDefault:"/data"`
+	ObservationStationId string `env:"WEATHER_OBSERVATION_STATION_ID" envDefault:"KSTP"`
+	ForecastStationId    string `env:"WEATHER_FORECAST_STATION_ID" envDefault:"MPX"`
+	LogDirectory         string `env:"WEATHER_LOG_DIRECTORY" envDefault:"logs"`
+	LogOutput            string `env:"WEATHER_LOG_FILE" envDefault:"weatherlog.json"`
+	LogLevel             slog.Level
 }
 
 func (n NWSConfig) GetCurrentData() (*CurrentWeatherData, error) {
 	var currentData Observation
-	slog.Info("getting current weather data", "station", n.StationID)
+	slog.Info("getting current weather data", "observationStation", n.StationID, "forecastOffice", n.ForecastOffice)
 	resp, err := http.Get(n.BaseURL + "/stations/" + n.StationID + "/observations/latest")
 	if err != nil {
 		slog.Error("error fetching latest observation data", "error", err)
 		return nil, err
 	}
+	// _, err = io.ReadAll(resp.Body)
+	// if err != nil {
+	// 	slog.Error("error reading response body", "error", err)
+	// }
+
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
 			slog.Error("error closing stream", "error", err)
@@ -109,6 +111,7 @@ func (n NWSConfig) GetForecastData() (*ForecastWeatherData, error) {
 		slog.Error("non-200 response from upstread", "status_code", resp.StatusCode)
 		return nil, fmt.Errorf("unexpected status code %d", resp.StatusCode)
 	}
+
 	err = json.NewDecoder(resp.Body).Decode(&result)
 	if err != nil {
 		slog.Error("failed to read response body", "error", err)
@@ -122,74 +125,6 @@ func (n NWSConfig) GetForecastData() (*ForecastWeatherData, error) {
 	}, nil
 }
 
-func InitCsv(dir string) error {
-	headers := []string{"timestamp", "temperature", "humidity", "precipchance"}
-	_, err := os.Stat(path.Join(dir, "currentWeather.csv"))
-	if err == nil {
-		fmt.Println("report file exists")
-		return err
-	}
-	file, err := os.Create(path.Join(dir, "currentWeather.csv"))
-	if err != nil {
-		slog.Error("error creating current report file", "error", err)
-		return err
-	}
-	writer := csv.NewWriter(file)
-	defer writer.Flush()
-	if err := writer.Write(headers); err != nil {
-		return err
-	}
-	return err
-}
-
-func WriteCsv(dir string, d CurrentWeatherData) error {
-	var reportData []CurrentWeatherData
-	_, err := os.Stat(dir)
-	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			if err := os.Mkdir(dir, 0755); err != nil {
-				slog.Error("error creating directory", "directory", dir)
-				return err
-			}
-		}
-	}
-	report, err := os.OpenFile(path.Join(dir, "currentWeather.csv"), os.O_APPEND|os.O_WRONLY, 0644)
-	if err != nil {
-		slog.Error("file not found, creating empty report file")
-		if err = InitCsv(dir); err != nil {
-			return err
-		}
-		report, _ = os.OpenFile(path.Join(dir, "currentWeather.csv"), os.O_APPEND|os.O_WRONLY, 0644)
-	}
-	defer func() {
-		if err := report.Close(); err != nil {
-			slog.Error("error closing report stream")
-		}
-	}()
-	writer := csv.NewWriter(report)
-	defer writer.Flush()
-	reportData = append(reportData, d)
-	var chanceOfPrecip string
-	if d.ChanceOfPrecip {
-		chanceOfPrecip = "true"
-	} else {
-		chanceOfPrecip = "false"
-	}
-	for _, data := range reportData {
-		row := []string{
-			data.Timestamp,
-			strconv.FormatFloat(data.Temperature, 'f', 2, 64),
-			strconv.FormatFloat(data.Humidity, 'f', 2, 64),
-			chanceOfPrecip,
-		}
-		if err := writer.Write(row); err != nil {
-			return err
-		}
-	}
-	slog.Info("successful wrote report", "reportPath", dir+"currentWeather.csv")
-	return nil
-}
-
 func PrintToConsole(d CurrentWeatherData) {
 	fmt.Printf("\nCurrent weather for %v \n", d.Timestamp)
 	fmt.Printf("Current Temp: %v F\n", d.Temperature)
@@ -199,30 +134,32 @@ func PrintToConsole(d CurrentWeatherData) {
 }
 
 func main() {
-	var reportDir string
-	env := ReadEnvValues()
-	if env != (Environment{}) {
-		slog.Info("setting options per environment variables")
-		reportDir = env.ReportOutputDir
-	} else {
-		slog.Info("using default values")
-		reportDir = "/data"
+	cfg := Environment{}
+	if err := env.Parse(&cfg); err != nil {
+		slog.Error("failed to parse env vars")
 	}
+	logger, err := SetLogger(cfg)
+	if err != nil {
+		slog.Error("error setting logger", "error", err)
+		panic(err)
+	}
+	slog.SetDefault(logger)
 	nws := NWSConfig{
 		BaseURL:        "https://api.weather.gov",
 		GridX:          "102",
 		GridY:          "84",
-		ForecastOffice: "MPX",  // Minneapolis
-		StationID:      "KSTP", // St. Paul
+		ForecastOffice: cfg.ForecastStationId,    // Minneapolis
+		StationID:      cfg.ObservationStationId, // St. Paul
 	}
 	CurrentWeather, err := nws.GetCurrentData()
 	if err != nil {
-		slog.Error("error", "error", err)
-		panic(err)
+		slog.Error("error getting weather", "error", err)
+		log.Fatal(err)
 	}
-	if err := WriteCsv(reportDir, *CurrentWeather); err != nil {
+	if err := WriteCsv(cfg.ReportOutputDir, *CurrentWeather); err != nil {
+		slog.Error("error writing csv", "error", err)
 		log.Fatal(err)
 	}
 
-	PrintToConsole(*CurrentWeather)
+	// PrintToConsole(*CurrentWeather)
 }
