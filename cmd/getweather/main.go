@@ -6,7 +6,6 @@ import (
 	"log"
 	"log/slog"
 	"net/http"
-	"os"
 	"strconv"
 	"time"
 
@@ -43,7 +42,9 @@ type Environment struct {
 	ReportOutputDir      string `env:"WEATHER_REPORT_DIR" envDefault:"/data"`
 	ObservationStationId string `env:"WEATHER_OBSERVATION_STATION_ID" envDefault:"KSTP"`
 	ForecastStationId    string `env:"WEATHER_FORECAST_STATION_ID" envDefault:"MPX"`
+	LogDirectory         string `env:"WEATHER_LOG_DIRECTORY" envDefault:"logs"`
 	LogOutput            string `env:"WEATHER_LOG_FILE" envDefault:"weatherlog.json"`
+	LogLevel             slog.Level
 }
 
 func (n NWSConfig) GetCurrentData() (*CurrentWeatherData, error) {
@@ -133,16 +134,16 @@ func PrintToConsole(d CurrentWeatherData) {
 }
 
 func main() {
-	logHandler := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
-		Level: slog.LevelInfo,
-	})
-	logger := slog.New(logHandler)
-	slog.SetDefault(logger)
-
 	cfg := Environment{}
 	if err := env.Parse(&cfg); err != nil {
 		slog.Error("failed to parse env vars")
 	}
+	logger, err := SetLogger(cfg)
+	if err != nil {
+		slog.Error("error setting logger", "error", err)
+		panic(err)
+	}
+	slog.SetDefault(logger)
 	nws := NWSConfig{
 		BaseURL:        "https://api.weather.gov",
 		GridX:          "102",
