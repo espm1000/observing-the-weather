@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"log/slog"
 	"net/http"
@@ -55,11 +54,11 @@ func (n NWSConfig) GetCurrentData() (*CurrentWeatherData, error) {
 		slog.Error("error fetching latest observation data", "error", err)
 		return nil, err
 	}
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		slog.Error("error reading response body", "error", err)
-	}
-	slog.Info("response from nws", "response", string(body))
+	// _, err = io.ReadAll(resp.Body)
+	// if err != nil {
+	// 	slog.Error("error reading response body", "error", err)
+	// }
+
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
 			slog.Error("error closing stream", "error", err)
@@ -134,17 +133,16 @@ func PrintToConsole(d CurrentWeatherData) {
 }
 
 func main() {
+	logHandler := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+		Level: slog.LevelInfo,
+	})
+	logger := slog.New(logHandler)
+	slog.SetDefault(logger)
+
 	cfg := Environment{}
 	if err := env.Parse(&cfg); err != nil {
 		slog.Error("failed to parse env vars")
 	}
-	logFile, err := os.OpenFile(cfg.LogOutput, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
-	if err != nil {
-		slog.Error("error creating log file", "error", err)
-	}
-	// logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-	fileLogger := slog.New(slog.NewJSONHandler(logFile, nil))
-	slog.SetDefault(fileLogger)
 	nws := NWSConfig{
 		BaseURL:        "https://api.weather.gov",
 		GridX:          "102",
@@ -154,12 +152,13 @@ func main() {
 	}
 	CurrentWeather, err := nws.GetCurrentData()
 	if err != nil {
-		slog.Error("error", "error", err)
+		slog.Error("error getting weather", "error", err)
 		log.Fatal(err)
 	}
 	if err := WriteCsv(cfg.ReportOutputDir, *CurrentWeather); err != nil {
+		slog.Error("error writing csv", "error", err)
 		log.Fatal(err)
 	}
 
-	PrintToConsole(*CurrentWeather)
+	// PrintToConsole(*CurrentWeather)
 }

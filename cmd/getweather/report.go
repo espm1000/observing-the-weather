@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/csv"
 	"errors"
-	"fmt"
 	"log/slog"
 	"os"
 	"path"
@@ -12,10 +11,11 @@ import (
 )
 
 func InitCsv(dir string) error {
+	slog.Info("initializing empty csv report")
 	headers := []string{"timestamp", "polledTimestampe", "temperature", "humidity", "precipchance"}
 	_, err := os.Stat(path.Join(dir, "currentWeather.csv"))
 	if err == nil {
-		fmt.Println("report file exists")
+		slog.Info("report file exists")
 		return err
 	}
 	file, err := os.Create(path.Join(dir, "currentWeather.csv"))
