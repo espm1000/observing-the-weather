@@ -74,11 +74,8 @@ func (n NWSConfig) GetCurrentData() (*CurrentWeatherData, error) {
 		slog.Error("error decoding response stream", "error", err)
 		return nil, err
 	}
-	temp_f, err := ConvertCelciusToFahrenheit(currentData.Properties.Temperature.Value)
-	if err != nil {
-		return nil, err
-	}
-
+	temp_f := ConvertCelciusToFahrenheit(currentData.Properties.Temperature.Value)
+	
 	return &CurrentWeatherData{
 		Temperature:    temp_f,
 		Humidity:       currentData.Properties.RelativeHumidity.Value,

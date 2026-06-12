@@ -11,10 +11,10 @@ type LogConfig struct {
 	LogLevel slog.Level
 }
 
-func ConvertCelciusToFahrenheit(temp float64) (float64, error) {
+func ConvertCelciusToFahrenheit(temp float64) float64 {
 	slog.Info("converting temp to freedom units", "tempC", temp)
 	converted := (temp * 9 / 5) + 32
-	return converted, nil
+	return converted
 }
 
 func SetLogger(options Environment) (*slog.Logger, error) {

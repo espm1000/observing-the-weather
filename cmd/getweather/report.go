@@ -95,7 +95,7 @@ func ParseObservations(o ObservationCollection) error {
 	parsedCollection := make(map[string]HistoricalObvs)
 	for _, data := range o.Features {
 		parsedCollection[data.Properties.Timestamp] = HistoricalObvs{
-			Temperature: data.Properties.Temperature.Value,
+			Temperature: ConvertCelciusToFahrenheit(data.Properties.Temperature.Value),
 			Humidity:    data.Properties.RelativeHumidity.Value,
 		}
 	}
