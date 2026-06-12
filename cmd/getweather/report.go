@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/csv"
 	"errors"
+	"fmt"
 	"log/slog"
 	"os"
 	"path"
@@ -78,4 +79,58 @@ func WriteCsv(dir string, d CurrentWeatherData) error {
 	}
 	slog.Info("successful wrote report", "reportPath", dir+"currentWeather.csv")
 	return nil
+}
+
+type HistoricalObvs struct {
+	Temperature float64
+	Humidity    float64
+}
+
+type HistoricalCollection struct {
+	Timestamp string
+	Data      HistoricalObvs
+}
+
+func ParseObservations(o ObservationCollection) error {
+	parsedCollection := make(map[string]HistoricalObvs)
+	for _, data := range o.Features {
+		parsedCollection[data.Properties.Timestamp] = HistoricalObvs{
+			Temperature: data.Properties.Temperature.Value,
+			Humidity:    data.Properties.RelativeHumidity.Value,
+		}
+	}
+	slog.Info("sending to write csv")
+	if err := WriteObservationsReport("data", parsedCollection); err != nil {
+		slog.Error("error writing report", "error", err)
+	}
+	return nil
+}
+
+func WriteObservationsReport(dir string, observations map[string]HistoricalObvs) error {
+	if err := InitCsv(dir); err != nil {
+		slog.Error("error initializing csv", "error", err)
+	}
+	file, err := os.OpenFile(path.Join(dir, "currentWeather.csv"), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	if err != nil {
+		slog.Error("error opening file", "error", err)
+		return err
+	}
+	defer file.Close()
+	writer := csv.NewWriter(file)
+	defer writer.Flush()
+
+	for ts, data := range observations {
+		row := []string{
+			ts,
+			fmt.Sprintf("%.2f", data.Temperature),
+			fmt.Sprintf("%.2f", data.Humidity),
+			"false",
+			time.Now().UTC().Format("2006-01-02T15:04:05"),
+		}
+		if err := writer.Write(row); err != nil {
+			slog.Error("error writing rows", "error", err)
+			return err
+		}
+	}
+	return writer.Error()
 }

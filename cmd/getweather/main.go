@@ -12,12 +12,18 @@ import (
 	"github.com/caarlos0/env"
 )
 
+const (
+	BaseURL       = "https://api.weather.gov"
+	HistoricalURI = "/stations/%s/observations"
+)
+
 type NWSConfig struct {
-	BaseURL        string
 	GridX          string
 	GridY          string
 	ForecastOffice string
 	StationID      string
+	StartDate      string
+	EndDate        string
 }
 
 type CurrentWeatherData struct {
@@ -50,15 +56,11 @@ type Environment struct {
 func (n NWSConfig) GetCurrentData() (*CurrentWeatherData, error) {
 	var currentData Observation
 	slog.Info("getting current weather data", "observationStation", n.StationID, "forecastOffice", n.ForecastOffice)
-	resp, err := http.Get(n.BaseURL + "/stations/" + n.StationID + "/observations/latest")
+	resp, err := http.Get(BaseURL + "/stations/" + n.StationID + "/observations/latest")
 	if err != nil {
 		slog.Error("error fetching latest observation data", "error", err)
 		return nil, err
 	}
-	// _, err = io.ReadAll(resp.Body)
-	// if err != nil {
-	// 	slog.Error("error reading response body", "error", err)
-	// }
 
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
@@ -91,13 +93,13 @@ func (n NWSConfig) GetForecastData() (*ForecastWeatherData, error) {
 	var result Forecast
 
 	cfg := NWSConfig{
-		BaseURL:        "https://api.weather.gov",
+
 		GridX:          "102",
 		GridY:          "84",
 		ForecastOffice: "MPX",
 	}
 	slog.Info("getting forecast data")
-	resp, err := http.Get(cfg.BaseURL + "/gridpoints/" + cfg.ForecastOffice + "/" + cfg.GridX + "," + cfg.GridY + "/forecast")
+	resp, err := http.Get(BaseURL + "/gridpoints/" + cfg.ForecastOffice + "/" + cfg.GridX + "," + cfg.GridY + "/forecast")
 	if err != nil {
 		slog.Error("error calling weather service api", "error", err)
 		return nil, err
@@ -145,11 +147,12 @@ func main() {
 	}
 	slog.SetDefault(logger)
 	nws := NWSConfig{
-		BaseURL:        "https://api.weather.gov",
 		GridX:          "102",
 		GridY:          "84",
 		ForecastOffice: cfg.ForecastStationId,    // Minneapolis
 		StationID:      cfg.ObservationStationId, // St. Paul
+		StartDate:      "2026-06-01T00:00:00Z",
+		EndDate:        "2026-06-10T00:00:00Z",
 	}
 	CurrentWeather, err := nws.GetCurrentData()
 	if err != nil {
@@ -160,6 +163,8 @@ func main() {
 		slog.Error("error writing csv", "error", err)
 		log.Fatal(err)
 	}
+
+	GetHistoricalObservations(nws)
 
 	// PrintToConsole(*CurrentWeather)
 }

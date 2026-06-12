@@ -62,3 +62,7 @@ type Observation struct {
 	Geometry   Geometry              `json:"geometry"`
 	Properties ObservationProperties `json:"properties"`
 }
+
+type ObservationCollection struct {
+	Features []Observation `json:"features"`
+}
