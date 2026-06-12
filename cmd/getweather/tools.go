@@ -12,7 +12,7 @@ type LogConfig struct {
 }
 
 func ConvertCelciusToFahrenheit(temp float64) float64 {
-	slog.Info("converting temp to freedom units", "tempC", temp)
+	slog.Debug("converting temp to freedom units", "tempC", temp)
 	converted := (temp * 9 / 5) + 32
 	return converted
 }

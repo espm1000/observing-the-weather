@@ -31,10 +31,20 @@ func GetHistoricalObservations(c NWSConfig) (*ObservationCollection, error) {
 	}
 	defer resp.Body.Close()
 	json.NewDecoder(resp.Body).Decode(&collection)
-
-	if err := ParseObservations(collection); err != nil {
-		slog.Error("error parsing observations")
-		return nil, err
+	token_url := collection.Pagination.Next
+	parsedUrl, err := url.Parse(token_url)
+	if err != nil {
+		slog.Error("error parsing url", "error", err)
 	}
+	cursor := parsedUrl.Query().Get("cursor")
+	if len(cursor) > 0 {
+		fmt.Println("more")
+	}
+	// fmt.Println(cursor)
+	// if err := ParseObservations(collection); err != nil {
+	// 	slog.Error("error parsing observations")
+	// 	return nil, err
+	// }
+
 	return &collection, err
 }

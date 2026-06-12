@@ -63,6 +63,11 @@ type Observation struct {
 	Properties ObservationProperties `json:"properties"`
 }
 
+type Pagination struct {
+	Next string
+}
+
 type ObservationCollection struct {
-	Features []Observation `json:"features"`
+	Features  []Observation `json:"features"`
+	Pagination Pagination    `json:"pagination"`
 }
