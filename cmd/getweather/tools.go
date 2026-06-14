@@ -21,7 +21,6 @@ func SetLogger(options Environment) (*slog.Logger, error) {
 	if err := os.MkdirAll(options.LogDirectory, 0755); err != nil {
 		slog.Info("error creating directory")
 	}
-	slog.Info("setting log config", "log_directory", options.LogDirectory)
 	file, err := os.OpenFile(path.Join(options.LogDirectory, "weatherlog.json"), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 	if err != nil {
 		return nil, err
