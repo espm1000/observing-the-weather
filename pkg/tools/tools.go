@@ -15,6 +15,7 @@ type Environment struct {
 	ForecastStationId    string `env:"WEATHER_FORECAST_STATION_ID" envDefault:"MPX"`
 	LogDirectory         string `env:"WEATHER_LOG_DIRECTORY" envDefault:"logs"`
 	LogOutput            string `env:"WEATHER_LOG_FILE" envDefault:"weatherlog.json"`
+	PrintToConsole       string `env:"WEATHER_LOG_CONSOLE" envDefault:"false"`
 	LogLevel             slog.Level
 	Logger               *slog.Logger
 }

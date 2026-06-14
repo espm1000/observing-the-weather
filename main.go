@@ -58,6 +58,8 @@ func Main() error {
 		slog.Error("error writing csv", "error", err)
 		return err
 	}
-	//PrintToConsole(*CurrentWeather)
+	if cfg.PrintToConsole == "true" {
+		PrintToConsole(*CurrentWeather)
+	}
 	return err
 }
