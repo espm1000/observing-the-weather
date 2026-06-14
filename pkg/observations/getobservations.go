@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/espm1000/observing-the-weather/pkg/client"
 	"github.com/espm1000/observing-the-weather/pkg/report"
 	"github.com/espm1000/observing-the-weather/pkg/tools"
 )
@@ -21,7 +22,8 @@ type NWSConfig struct {
 func (n NWSConfig) GetCurrentData() (*report.CurrentWeatherData, error) {
 	var currentData Observation
 	slog.Info("getting current weather data", "observationStation", n.StationID, "forecastOffice", n.ForecastOffice)
-	resp, err := http.Get(n.BaseURL + "/stations/" + n.StationID + "/observations/latest")
+	url := n.BaseURL + "/stations/" + n.StationID + "/observations/latest"
+	resp, err := client.CallGet(url)
 	if err != nil {
 		slog.Error("error fetching latest observation data", "error", err)
 		return nil, err

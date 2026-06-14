@@ -5,6 +5,8 @@ import (
 	"log/slog"
 	"os"
 	"path"
+
+	"github.com/caarlos0/env"
 )
 
 type Environment struct {
@@ -24,6 +26,13 @@ func ConvertCelciusToFahrenheit(temp float64) (float64, error) {
 	slog.Info("converting temp to freedom units", "tempC", temp)
 	converted := (temp * 9 / 5) + 32
 	return converted, nil
+}
+
+func SetEnvironment(e *Environment) error {
+	if err := env.Parse(e); err != nil {
+		return err
+	}
+	return nil
 }
 
 func SetLogger(options Environment) (*slog.Logger, error) {

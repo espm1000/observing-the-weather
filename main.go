@@ -9,29 +9,31 @@ import (
 	"github.com/espm1000/observing-the-weather/pkg/observations"
 	"github.com/espm1000/observing-the-weather/pkg/report"
 	"github.com/espm1000/observing-the-weather/pkg/tools"
-
-	"github.com/caarlos0/env"
 )
 
 func PrintToConsole(d report.CurrentWeatherData) {
 	fmt.Printf("\nCurrent weather for %v \n", d.Timestamp)
-	fmt.Printf("Current Temp: %v F\n", d.Temperature)
+	fmt.Printf("Current Temp: %v F\n", strconv.FormatFloat(d.Temperature, 'f', 2, 64))
 	fmt.Printf("Current Windspeed: %v km/h\n", d.Windspeed)
 	fmt.Printf("Current Humidity: %v Percent\n", strconv.FormatFloat(d.Humidity, 'f', 2, 64))
 	fmt.Printf("Chance of Precip: %v (not implemented)\n", d.ChanceOfPrecip)
 }
 
-func main() {
+func setPreConfig() *tools.Environment {
 	cfg := tools.Environment{}
-	if err := env.Parse(&cfg); err != nil {
-		slog.Error("failed to parse env vars")
+	if err := tools.SetEnvironment(&cfg); err != nil {
+		slog.Error("error setting environment variables", "error", err)
+		return nil
 	}
-	logger, err := tools.SetLogger(cfg)
+	_, err := tools.SetLogger(cfg)
 	if err != nil {
 		slog.Error("error setting logger", "error", err)
-		panic(err)
 	}
-	slog.SetDefault(logger)
+	return &cfg
+}
+
+func main() {
+	cfg := setPreConfig()
 	nws := observations.NWSConfig{
 		BaseURL:        "https://api.weather.gov",
 		GridX:          "102",
@@ -48,6 +50,5 @@ func main() {
 		slog.Error("error writing csv", "error", err)
 		log.Fatal(err)
 	}
-
-	// PrintToConsole(*CurrentWeather)
+	//PrintToConsole(*CurrentWeather)
 }
