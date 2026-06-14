@@ -85,6 +85,6 @@ func WriteCsv(dir string, d CurrentWeatherData) error {
 			return err
 		}
 	}
-	slog.Info("successful wrote report", "reportPath", dir+"currentWeather.csv")
+	slog.Info("successful wrote report", "reportPath", path.Join(dir, "currentWeather.csv"))
 	return nil
 }
