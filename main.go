@@ -33,6 +33,14 @@ func setPreConfig() *tools.Environment {
 	return &cfg
 }
 
+func setReportConfig() *report.ReportConfig {
+	rpt := report.ReportConfig{}
+	if err := tools.SetReportEnvironment(&rpt); err != nil {
+		slog.Error("error setting report vars", "error", err)
+	}
+	return &rpt
+}
+
 func main() {
 	if err := Main(); err != nil {
 		panic(err)
@@ -42,6 +50,8 @@ func main() {
 func Main() error {
 	cfg := setPreConfig()
 	slog.SetDefault(cfg.Logger)
+	rpt := setReportConfig()
+	fmt.Println(rpt.Directory, rpt.ReportFile)
 	nws := nws.NWSConfig{
 		BaseURL:        "https://api.weather.gov",
 		GridX:          "102",
@@ -54,7 +64,7 @@ func Main() error {
 		slog.Error("error getting weather", "error", err)
 		return err
 	}
-	if err := report.WriteCsv(cfg.ReportOutputDir, *CurrentWeather); err != nil {
+	if err := report.WriteCsv(*rpt, *CurrentWeather); err != nil {
 		slog.Error("error writing csv", "error", err)
 		return err
 	}
