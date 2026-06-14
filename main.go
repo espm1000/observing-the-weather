@@ -51,7 +51,6 @@ func Main() error {
 	cfg := setPreConfig()
 	slog.SetDefault(cfg.Logger)
 	rpt := setReportConfig()
-	fmt.Println(rpt.Directory, rpt.ReportFile)
 	nws := nws.NWSConfig{
 		BaseURL:        "https://api.weather.gov",
 		GridX:          "102",

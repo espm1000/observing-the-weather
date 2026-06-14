@@ -10,14 +10,6 @@ import (
 	"github.com/espm1000/observing-the-weather/pkg/report"
 )
 
-type NWSConfig struct {
-	BaseURL        string
-	GridX          string
-	GridY          string
-	ForecastOffice string
-	StationID      string
-}
-
 type Environment struct {
 	ObservationStationId string `env:"WEATHER_OBSERVATION_STATION_ID" envDefault:"KSTP"`
 	ForecastStationId    string `env:"WEATHER_FORECAST_STATION_ID" envDefault:"MPX"`
