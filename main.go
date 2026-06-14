@@ -25,15 +25,18 @@ func setPreConfig() *tools.Environment {
 		slog.Error("error setting environment variables", "error", err)
 		return nil
 	}
-	_, err := tools.SetLogger(cfg)
+	logger, err := tools.SetLogger(cfg)
 	if err != nil {
 		slog.Error("error setting logger", "error", err)
 	}
+	cfg.Logger = logger
+
 	return &cfg
 }
 
 func main() {
 	cfg := setPreConfig()
+	slog.SetDefault(cfg.Logger)
 	nws := observations.NWSConfig{
 		BaseURL:        "https://api.weather.gov",
 		GridX:          "102",
