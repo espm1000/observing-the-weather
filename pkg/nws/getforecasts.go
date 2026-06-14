@@ -5,19 +5,16 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+
+	"github.com/espm1000/observing-the-weather/pkg/client"
 )
 
 func (n NWSConfig) GetForecastData() (*ForecastWeatherData, error) {
 	var result Forecast
 
-	cfg := NWSConfig{
-		BaseURL:        "https://api.weather.gov",
-		GridX:          "102",
-		GridY:          "84",
-		ForecastOffice: "MPX",
-	}
 	slog.Info("getting forecast data")
-	resp, err := http.Get(cfg.BaseURL + "/gridpoints/" + cfg.ForecastOffice + "/" + cfg.GridX + "," + cfg.GridY + "/forecast")
+	url := n.BaseURL + "/gridpoints/" + n.ForecastOffice + "/" + n.GridX + "," + n.GridY + "/forecast"
+	resp, err := client.CallGet(url)
 	if err != nil {
 		slog.Error("error calling weather service api", "error", err)
 		return nil, err
@@ -28,7 +25,7 @@ func (n NWSConfig) GetForecastData() (*ForecastWeatherData, error) {
 		}
 	}()
 	if resp.StatusCode != http.StatusOK {
-		slog.Error("non-200 response from upstread", "status_code", resp.StatusCode)
+		slog.Error("non-200 response from upstream", "status_code", resp.StatusCode)
 		return nil, fmt.Errorf("unexpected status code %d", resp.StatusCode)
 	}
 
