@@ -161,7 +161,5 @@ func main() {
 		log.Fatal(err)
 	}
 
-	GetHistoricalObservations(nws)
-
-	// PrintToConsole(*CurrentWeather)
+	PrintToConsole(*CurrentWeather)
 }

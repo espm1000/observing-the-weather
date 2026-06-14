@@ -91,6 +91,25 @@ type HistoricalCollection struct {
 	Data      HistoricalObvs
 }
 
+func ReadCSV(file string) error {
+	report, err := os.Open(file)
+	if err != nil {
+		slog.Error("error reading file", "error", err, "file", file)
+		return err
+	}
+	defer report.Close()
+
+	reader := csv.NewReader(report)
+	records, err := reader.ReadAll()
+	if err != nil {
+		slog.Error("error reading contents of report", "error", err)
+		return err
+	}
+	data := records[1:]
+	slog.Info("parsed data from report", "dataRows", len(data))
+	return nil
+}
+
 func ParseObservations(o ObservationCollection) error {
 	parsedCollection := make(map[string]HistoricalObvs)
 	for _, data := range o.Features {
@@ -132,5 +151,6 @@ func WriteObservationsReport(dir string, observations map[string]HistoricalObvs)
 			return err
 		}
 	}
+	ReadCSV(path.Join(dir, "currentWeather.csv"))
 	return writer.Error()
 }

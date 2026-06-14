@@ -48,7 +48,6 @@ func GetHistoricalObservations(c NWSConfig) (*ObservationCollection, error) {
 			return nil, err
 		}
 		ParseObservations(collection)
-		slog.Info("observations added to collection", "length", len(collection.Features))
 
 		for _, o := range collection.Features {
 			obs[o.Properties.Timestamp] = HistoricalObvs{
@@ -57,9 +56,7 @@ func GetHistoricalObservations(c NWSConfig) (*ObservationCollection, error) {
 			}
 		}
 		nextURL_s = collection.Pagination.Next
-		fmt.Println(nextURL_s)
 	}
-	slog.Info("no additional next tokens")
 	// ParseObservations(collection)
 	// req, err := http.NewRequest(http.MethodGet, url.String(), nil)
 	// if err != nil {
