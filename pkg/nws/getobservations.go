@@ -11,14 +11,6 @@ import (
 	"github.com/espm1000/observing-the-weather/pkg/tools"
 )
 
-type NWSConfig struct {
-	BaseURL        string
-	GridX          string
-	GridY          string
-	ForecastOffice string
-	StationID      string
-}
-
 func (n NWSConfig) GetCurrentData() (*report.CurrentWeatherData, error) {
 	var currentData Observation
 	slog.Info("getting current weather data", "observationStation", n.StationID, "forecastOffice", n.ForecastOffice)
