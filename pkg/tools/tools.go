@@ -16,6 +16,8 @@ type Environment struct {
 	LogDirectory         string `env:"WEATHER_LOG_DIRECTORY" envDefault:"logs"`
 	LogOutput            string `env:"WEATHER_LOG_FILE" envDefault:"weatherlog.json"`
 	PrintToConsole       string `env:"WEATHER_LOG_CONSOLE" envDefault:"false"`
+	GridX                string `env:"WEATHER_GRID_X" envDefault:"102"`
+	GridY                string `env:"WEATHER_GRID_Y" envDefault:"84"`
 	LogLevel             slog.Level
 	Logger               *slog.Logger
 }

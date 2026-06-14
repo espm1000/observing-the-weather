@@ -53,8 +53,8 @@ func Main() error {
 	rpt := setReportConfig()
 	nws := nws.NWSConfig{
 		BaseURL:        "https://api.weather.gov",
-		GridX:          "102",
-		GridY:          "84",
+		GridX:          cfg.GridX,
+		GridY:          cfg.GridY,
 		ForecastOffice: cfg.ForecastStationId,    // Minneapolis
 		StationID:      cfg.ObservationStationId, // St. Paul
 	}
