@@ -9,6 +9,14 @@ import (
 	"github.com/caarlos0/env"
 )
 
+type NWSConfig struct {
+	BaseURL        string
+	GridX          string
+	GridY          string
+	ForecastOffice string
+	StationID      string
+}
+
 type Environment struct {
 	ReportOutputDir      string `env:"WEATHER_REPORT_DIR" envDefault:"/data"`
 	ObservationStationId string `env:"WEATHER_OBSERVATION_STATION_ID" envDefault:"KSTP"`

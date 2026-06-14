@@ -1,4 +1,4 @@
-package observations
+package nws
 
 import (
 	"encoding/json"

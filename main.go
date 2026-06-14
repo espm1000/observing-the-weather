@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"strconv"
 
-	"github.com/espm1000/observing-the-weather/pkg/observations"
+	"github.com/espm1000/observing-the-weather/pkg/nws"
 	"github.com/espm1000/observing-the-weather/pkg/report"
 	"github.com/espm1000/observing-the-weather/pkg/tools"
 )
@@ -42,7 +42,7 @@ func main() {
 func Main() error {
 	cfg := setPreConfig()
 	slog.SetDefault(cfg.Logger)
-	nws := observations.NWSConfig{
+	nws := nws.NWSConfig{
 		BaseURL:        "https://api.weather.gov",
 		GridX:          "102",
 		GridY:          "84",

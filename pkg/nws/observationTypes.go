@@ -1,4 +1,4 @@
-package observations
+package nws
 
 type QuantitativeValue struct {
 	Value          float64 `json:"value"`
