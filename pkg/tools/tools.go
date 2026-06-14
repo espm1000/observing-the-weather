@@ -7,6 +7,7 @@ import (
 	"path"
 
 	"github.com/caarlos0/env"
+	"github.com/espm1000/observing-the-weather/pkg/report"
 )
 
 type NWSConfig struct {
@@ -18,7 +19,6 @@ type NWSConfig struct {
 }
 
 type Environment struct {
-	ReportOutputDir      string `env:"WEATHER_REPORT_DIR" envDefault:"/data"`
 	ObservationStationId string `env:"WEATHER_OBSERVATION_STATION_ID" envDefault:"KSTP"`
 	ForecastStationId    string `env:"WEATHER_FORECAST_STATION_ID" envDefault:"MPX"`
 	LogDirectory         string `env:"WEATHER_LOG_DIRECTORY" envDefault:"logs"`
@@ -40,6 +40,13 @@ func ConvertCelciusToFahrenheit(temp float64) (float64, error) {
 
 func SetEnvironment(e *Environment) error {
 	if err := env.Parse(e); err != nil {
+		return err
+	}
+	return nil
+}
+
+func SetReportEnvironment(r *report.ReportConfig) error {
+	if err := env.Parse(r); err != nil {
 		return err
 	}
 	return nil

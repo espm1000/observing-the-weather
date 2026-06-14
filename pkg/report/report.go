@@ -10,6 +10,11 @@ import (
 	"time"
 )
 
+type ReportConfig struct {
+	Directory  string `env:"WEATHER_REPORT_DIR" envDefault:"/data"`
+	ReportFile string `env:"WEATHER_REPORT_FILE" envDefault:"currentWeather.csv"`
+}
+
 type CurrentWeatherData struct {
 	Temperature    float64
 	Humidity       float64
@@ -19,23 +24,23 @@ type CurrentWeatherData struct {
 	PrecipLastHour float64
 }
 
-func InitCsv(dir string) error {
+func InitCsv(r ReportConfig) error {
 	slog.Debug("initializing empty csv report")
 	headers := []string{"timestamp", "temperature", "humidity", "precipchance", "polledTimestamp"}
-	_, err := os.Stat(path.Join(dir, "currentWeather.csv"))
-	if err == nil {
-		slog.Debug("report file exists")
-		return err
-	}
-	if _, err := os.Stat(dir); err != nil {
+	if _, err := os.Stat(r.Directory); err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			if err = os.Mkdir(dir, 0755); err != nil {
-				slog.Error("error creating directory", "directory", dir, "error", err)
+			if err = os.Mkdir(r.Directory, 0755); err != nil {
+				slog.Error("error creating directory", "directory", r.Directory, "error", err)
 				return err
 			}
 		}
 	}
-	file, err := os.Create(path.Join(dir, "currentWeather.csv"))
+	_, err := os.Stat(path.Join(r.Directory, r.ReportFile))
+	if err == nil {
+		slog.Debug("report file exists")
+		return err
+	}
+	file, err := os.Create(path.Join(r.Directory, r.ReportFile))
 	if err != nil {
 		slog.Error("error creating current report file", "error", err)
 		return err
@@ -49,29 +54,28 @@ func InitCsv(dir string) error {
 	return err
 }
 
-func WriteCsv(dir string, d CurrentWeatherData) error {
+func WriteCsv(r ReportConfig, d CurrentWeatherData) error {
 	var reportData []CurrentWeatherData
-	if err := InitCsv(dir); err != nil {
+	var chanceOfPrecip string
+	if err := InitCsv(r); err != nil {
 		slog.Error("error initializing report", "error", err)
 		return err
 	}
-	report, err := os.OpenFile(path.Join(dir, "currentWeather.csv"), os.O_APPEND|os.O_WRONLY, 0644)
+	report, err := os.OpenFile(path.Join(r.Directory, r.ReportFile), os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
-		slog.Error("file not found, creating empty report file")
-		if err = InitCsv(dir); err != nil {
-			return err
-		}
-		report, _ = os.OpenFile(path.Join(dir, "currentWeather.csv"), os.O_APPEND|os.O_WRONLY, 0644)
+		slog.Error("error writing report", "error", err)
+		return err
 	}
 	defer func() {
 		if err := report.Close(); err != nil {
 			slog.Error("error closing report stream")
 		}
 	}()
+
 	writer := csv.NewWriter(report)
 	defer writer.Flush()
+
 	reportData = append(reportData, d)
-	var chanceOfPrecip string
 	if d.ChanceOfPrecip {
 		chanceOfPrecip = "true"
 	} else {
@@ -89,6 +93,6 @@ func WriteCsv(dir string, d CurrentWeatherData) error {
 			return err
 		}
 	}
-	slog.Info("successful wrote report", "reportPath", path.Join(dir, "currentWeather.csv"))
+	slog.Info("successfully wrote report", "reportPath", path.Join(r.Directory, r.ReportFile))
 	return nil
 }
