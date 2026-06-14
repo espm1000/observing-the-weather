@@ -1,4 +1,4 @@
-package main
+package report
 
 import (
 	"encoding/csv"
@@ -10,9 +10,18 @@ import (
 	"time"
 )
 
+type CurrentWeatherData struct {
+	Temperature    float64
+	Humidity       float64
+	Windspeed      any
+	ChanceOfPrecip bool
+	Timestamp      string
+	PrecipLastHour float64
+}
+
 func InitCsv(dir string) error {
 	slog.Info("initializing empty csv report")
-	headers := []string{"timestamp", "polledTimestampe", "temperature", "humidity", "precipchance"}
+	headers := []string{"timestamp", "temperature", "humidity", "precipchance", "polledTimestamp"}
 	_, err := os.Stat(path.Join(dir, "currentWeather.csv"))
 	if err == nil {
 		slog.Info("report file exists")
@@ -67,10 +76,10 @@ func WriteCsv(dir string, d CurrentWeatherData) error {
 	for _, data := range reportData {
 		row := []string{
 			data.Timestamp,
-			time.Now().UTC().Format("2006-01-02T15:04:05"),
 			strconv.FormatFloat(data.Temperature, 'f', 2, 64),
 			strconv.FormatFloat(data.Humidity, 'f', 2, 64),
 			chanceOfPrecip,
+			time.Now().UTC().Format("2006-01-02T15:04:05"),
 		}
 		if err := writer.Write(row); err != nil {
 			return err

@@ -9,6 +9,10 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/espm1000/observing-the-weather/pkg/observations"
+	"github.com/espm1000/observing-the-weather/pkg/report"
+	"github.com/espm1000/observing-the-weather/pkg/tools"
+
 	"github.com/caarlos0/env"
 )
 
@@ -20,15 +24,6 @@ type NWSConfig struct {
 	StationID      string
 }
 
-type CurrentWeatherData struct {
-	Temperature    float64
-	Humidity       float64
-	Windspeed      any
-	ChanceOfPrecip bool
-	Timestamp      string
-	PrecipLastHour float64
-}
-
 type ForecastWeatherData struct {
 	Temperature    any
 	Humidity       float64
@@ -38,17 +33,8 @@ type ForecastWeatherData struct {
 	Timestamp      time.Time
 }
 
-type Environment struct {
-	ReportOutputDir      string `env:"WEATHER_REPORT_DIR" envDefault:"/data"`
-	ObservationStationId string `env:"WEATHER_OBSERVATION_STATION_ID" envDefault:"KSTP"`
-	ForecastStationId    string `env:"WEATHER_FORECAST_STATION_ID" envDefault:"MPX"`
-	LogDirectory         string `env:"WEATHER_LOG_DIRECTORY" envDefault:"logs"`
-	LogOutput            string `env:"WEATHER_LOG_FILE" envDefault:"weatherlog.json"`
-	LogLevel             slog.Level
-}
-
-func (n NWSConfig) GetCurrentData() (*CurrentWeatherData, error) {
-	var currentData Observation
+func (n NWSConfig) GetCurrentData() (*report.CurrentWeatherData, error) {
+	var currentData observations.Observation
 	slog.Info("getting current weather data", "observationStation", n.StationID, "forecastOffice", n.ForecastOffice)
 	resp, err := http.Get(n.BaseURL + "/stations/" + n.StationID + "/observations/latest")
 	if err != nil {
@@ -72,12 +58,12 @@ func (n NWSConfig) GetCurrentData() (*CurrentWeatherData, error) {
 		slog.Error("error decoding response stream", "error", err)
 		return nil, err
 	}
-	temp_f, err := ConvertCelciusToFahrenheit(currentData.Properties.Temperature.Value)
+	temp_f, err := tools.ConvertCelciusToFahrenheit(currentData.Properties.Temperature.Value)
 	if err != nil {
 		return nil, err
 	}
 
-	return &CurrentWeatherData{
+	return &report.CurrentWeatherData{
 		Temperature:    temp_f,
 		Humidity:       currentData.Properties.RelativeHumidity.Value,
 		Windspeed:      currentData.Properties.WindSpeed.Value,
@@ -87,45 +73,7 @@ func (n NWSConfig) GetCurrentData() (*CurrentWeatherData, error) {
 
 }
 
-func (n NWSConfig) GetForecastData() (*ForecastWeatherData, error) {
-	var result Forecast
-
-	cfg := NWSConfig{
-		BaseURL:        "https://api.weather.gov",
-		GridX:          "102",
-		GridY:          "84",
-		ForecastOffice: "MPX",
-	}
-	slog.Info("getting forecast data")
-	resp, err := http.Get(cfg.BaseURL + "/gridpoints/" + cfg.ForecastOffice + "/" + cfg.GridX + "," + cfg.GridY + "/forecast")
-	if err != nil {
-		slog.Error("error calling weather service api", "error", err)
-		return nil, err
-	}
-	defer func() {
-		if err := resp.Body.Close(); err != nil {
-			slog.Error("error closing stream", "error", err)
-		}
-	}()
-	if resp.StatusCode != http.StatusOK {
-		slog.Error("non-200 response from upstread", "status_code", resp.StatusCode)
-		return nil, fmt.Errorf("unexpected status code %d", resp.StatusCode)
-	}
-
-	err = json.NewDecoder(resp.Body).Decode(&result)
-	if err != nil {
-		slog.Error("failed to read response body", "error", err)
-		return nil, err
-	}
-	return &ForecastWeatherData{
-		Temperature:   result.Properties.Periods[0].Temperature,
-		Windspeed:     result.Properties.Periods[0].WindSpeed,
-		Timestamp:     result.Properties.Periods[0].EndTime,
-		PrecipPercent: result.Properties.Periods[0].ProbabilityOfPrecipitation.Value,
-	}, nil
-}
-
-func PrintToConsole(d CurrentWeatherData) {
+func PrintToConsole(d report.CurrentWeatherData) {
 	fmt.Printf("\nCurrent weather for %v \n", d.Timestamp)
 	fmt.Printf("Current Temp: %v F\n", d.Temperature)
 	fmt.Printf("Current Windspeed: %v km/h\n", d.Windspeed)
@@ -134,11 +82,11 @@ func PrintToConsole(d CurrentWeatherData) {
 }
 
 func main() {
-	cfg := Environment{}
+	cfg := tools.Environment{}
 	if err := env.Parse(&cfg); err != nil {
 		slog.Error("failed to parse env vars")
 	}
-	logger, err := SetLogger(cfg)
+	logger, err := tools.SetLogger(cfg)
 	if err != nil {
 		slog.Error("error setting logger", "error", err)
 		panic(err)
@@ -156,7 +104,7 @@ func main() {
 		slog.Error("error getting weather", "error", err)
 		log.Fatal(err)
 	}
-	if err := WriteCsv(cfg.ReportOutputDir, *CurrentWeather); err != nil {
+	if err := report.WriteCsv(cfg.ReportOutputDir, *CurrentWeather); err != nil {
 		slog.Error("error writing csv", "error", err)
 		log.Fatal(err)
 	}

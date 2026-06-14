@@ -1,4 +1,12 @@
-package main
+package observations
+
+type QuantitativeValue struct {
+	Value          float64 `json:"value"`
+	MaxValue       float64 `json:"maxValue"`
+	MinValue       float64 `json:"minValue"`
+	UnitCode       string  `json:"unitCode"`
+	QualityControl string  `json:"qualityControl"`
+}
 
 type ObservationQuantitativeValue struct {
 	Value          float64 `json:"value"`
@@ -53,6 +61,12 @@ type ObservationGeometry struct {
 	Type        string    `json:"type"`
 	Coordinates []float64 `json:"coordinates"`
 	Bbox        []float64 `json:"bbox"`
+}
+
+type Geometry struct {
+	Type        string    `json:"type"`
+	Coordinates any       `json:"coordinates"`
+	BBox        []float64 `json:"bbox"`
 }
 
 type Observation struct {

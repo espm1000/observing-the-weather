@@ -1,4 +1,4 @@
-package main
+package tools
 
 import (
 	"io"
@@ -6,6 +6,15 @@ import (
 	"os"
 	"path"
 )
+
+type Environment struct {
+	ReportOutputDir      string `env:"WEATHER_REPORT_DIR" envDefault:"/data"`
+	ObservationStationId string `env:"WEATHER_OBSERVATION_STATION_ID" envDefault:"KSTP"`
+	ForecastStationId    string `env:"WEATHER_FORECAST_STATION_ID" envDefault:"MPX"`
+	LogDirectory         string `env:"WEATHER_LOG_DIRECTORY" envDefault:"logs"`
+	LogOutput            string `env:"WEATHER_LOG_FILE" envDefault:"weatherlog.json"`
+	LogLevel             slog.Level
+}
 
 type LogConfig struct {
 	LogLevel slog.Level
