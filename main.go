@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"log/slog"
 	"strconv"
 
@@ -35,6 +34,12 @@ func setPreConfig() *tools.Environment {
 }
 
 func main() {
+	if err := Main(); err != nil {
+		panic(err)
+	}
+}
+
+func Main() error {
 	cfg := setPreConfig()
 	slog.SetDefault(cfg.Logger)
 	nws := observations.NWSConfig{
@@ -47,11 +52,12 @@ func main() {
 	CurrentWeather, err := nws.GetCurrentData()
 	if err != nil {
 		slog.Error("error getting weather", "error", err)
-		log.Fatal(err)
+		return err
 	}
 	if err := report.WriteCsv(cfg.ReportOutputDir, *CurrentWeather); err != nil {
 		slog.Error("error writing csv", "error", err)
-		log.Fatal(err)
+		return err
 	}
 	//PrintToConsole(*CurrentWeather)
+	return err
 }
