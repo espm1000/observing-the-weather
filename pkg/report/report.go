@@ -20,12 +20,20 @@ type CurrentWeatherData struct {
 }
 
 func InitCsv(dir string) error {
-	slog.Info("initializing empty csv report")
+	slog.Debug("initializing empty csv report")
 	headers := []string{"timestamp", "temperature", "humidity", "precipchance", "polledTimestamp"}
 	_, err := os.Stat(path.Join(dir, "currentWeather.csv"))
 	if err == nil {
-		slog.Info("report file exists")
+		slog.Debug("report file exists")
 		return err
+	}
+	if _, err := os.Stat(dir); err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			if err = os.Mkdir(dir, 0755); err != nil {
+				slog.Error("error creating directory", "directory", dir, "error", err)
+				return err
+			}
+		}
 	}
 	file, err := os.Create(path.Join(dir, "currentWeather.csv"))
 	if err != nil {
@@ -35,6 +43,7 @@ func InitCsv(dir string) error {
 	writer := csv.NewWriter(file)
 	defer writer.Flush()
 	if err := writer.Write(headers); err != nil {
+		slog.Error("error writing headers to report", "error", err)
 		return err
 	}
 	return err
@@ -42,14 +51,9 @@ func InitCsv(dir string) error {
 
 func WriteCsv(dir string, d CurrentWeatherData) error {
 	var reportData []CurrentWeatherData
-	_, err := os.Stat(dir)
-	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			if err := os.Mkdir(dir, 0755); err != nil {
-				slog.Error("error creating directory", "directory", dir)
-				return err
-			}
-		}
+	if err := InitCsv(dir); err != nil {
+		slog.Error("error initializing report", "error", err)
+		return err
 	}
 	report, err := os.OpenFile(path.Join(dir, "currentWeather.csv"), os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
