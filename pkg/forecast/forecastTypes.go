@@ -8,6 +8,15 @@ import (
 	"time"
 )
 
+type ForecastWeatherData struct {
+	Temperature    any
+	Humidity       float64
+	Windspeed      any
+	ChanceOfPrecip bool
+	PrecipPercent  any
+	Timestamp      time.Time
+}
+
 type Forecast struct {
 	Context    any           `json:"@context"`
 	ID         string        `json:"id"`

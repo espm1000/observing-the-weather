@@ -1,13 +1,10 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"log/slog"
-	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/espm1000/observing-the-weather/pkg/observations"
 	"github.com/espm1000/observing-the-weather/pkg/report"
@@ -15,63 +12,6 @@ import (
 
 	"github.com/caarlos0/env"
 )
-
-type NWSConfig struct {
-	BaseURL        string
-	GridX          string
-	GridY          string
-	ForecastOffice string
-	StationID      string
-}
-
-type ForecastWeatherData struct {
-	Temperature    any
-	Humidity       float64
-	Windspeed      any
-	ChanceOfPrecip bool
-	PrecipPercent  any
-	Timestamp      time.Time
-}
-
-func (n NWSConfig) GetCurrentData() (*report.CurrentWeatherData, error) {
-	var currentData observations.Observation
-	slog.Info("getting current weather data", "observationStation", n.StationID, "forecastOffice", n.ForecastOffice)
-	resp, err := http.Get(n.BaseURL + "/stations/" + n.StationID + "/observations/latest")
-	if err != nil {
-		slog.Error("error fetching latest observation data", "error", err)
-		return nil, err
-	}
-	// _, err = io.ReadAll(resp.Body)
-	// if err != nil {
-	// 	slog.Error("error reading response body", "error", err)
-	// }
-
-	defer func() {
-		if err := resp.Body.Close(); err != nil {
-			slog.Error("error closing stream", "error", err)
-		}
-	}()
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("unexpected response code: %d", resp.StatusCode)
-	}
-	if err = json.NewDecoder(resp.Body).Decode(&currentData); err != nil {
-		slog.Error("error decoding response stream", "error", err)
-		return nil, err
-	}
-	temp_f, err := tools.ConvertCelciusToFahrenheit(currentData.Properties.Temperature.Value)
-	if err != nil {
-		return nil, err
-	}
-
-	return &report.CurrentWeatherData{
-		Temperature:    temp_f,
-		Humidity:       currentData.Properties.RelativeHumidity.Value,
-		Windspeed:      currentData.Properties.WindSpeed.Value,
-		Timestamp:      currentData.Properties.Timestamp,
-		ChanceOfPrecip: false,
-	}, nil
-
-}
 
 func PrintToConsole(d report.CurrentWeatherData) {
 	fmt.Printf("\nCurrent weather for %v \n", d.Timestamp)
@@ -92,7 +32,7 @@ func main() {
 		panic(err)
 	}
 	slog.SetDefault(logger)
-	nws := NWSConfig{
+	nws := observations.NWSConfig{
 		BaseURL:        "https://api.weather.gov",
 		GridX:          "102",
 		GridY:          "84",
