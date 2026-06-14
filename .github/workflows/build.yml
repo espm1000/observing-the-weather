@@ -39,6 +39,7 @@ jobs:
           docker build -t "$IMAGE" .
       - name: Push it real good
         id: push
+        if: github.ref == 'refs/heads/main'
         run: |
           IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.TAG }}"
           docker push "${IMAGE}"
