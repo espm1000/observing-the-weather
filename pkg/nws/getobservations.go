@@ -14,7 +14,7 @@ import (
 func (n NWSConfig) GetCurrentData() (*report.CurrentWeatherData, error) {
 	var currentData Observation
 	slog.Info("getting current weather data", "observationStation", n.StationID, "forecastOffice", n.ForecastOffice)
-	url := n.BaseURL + "/stations/" + n.StationID + "/observations/latest"
+	url := BaseURL + "/stations/" + n.StationID + "/observations/latest"
 	resp, err := client.CallGet(url)
 	if err != nil {
 		slog.Error("error fetching latest observation data", "error", err)

@@ -10,11 +10,12 @@ import (
 	"github.com/espm1000/observing-the-weather/pkg/tools"
 )
 
-func PrintToConsole(d report.CurrentWeatherData) {
+func PrintToConsole(d report.CurrentWeatherData, cfg tools.Environment) {
 	fmt.Printf("\nCurrent weather for %v \n", d.Timestamp)
 	fmt.Printf("Current Temp: %v F\n", strconv.FormatFloat(d.Temperature, 'f', 2, 64))
 	fmt.Printf("Current Windspeed: %v km/h\n", d.Windspeed)
 	fmt.Printf("Current Humidity: %v Percent\n", strconv.FormatFloat(d.Humidity, 'f', 2, 64))
+	fmt.Printf("Grid Coordinates\nX: %v\nY: %v\n", cfg.GridX, cfg.GridY)
 	fmt.Printf("Chance of Precip: %v (not implemented)\n", d.ChanceOfPrecip)
 }
 
@@ -52,9 +53,6 @@ func Main() error {
 	slog.SetDefault(cfg.Logger)
 	rpt := setReportConfig()
 	nws := nws.NWSConfig{
-		BaseURL:        "https://api.weather.gov",
-		GridX:          cfg.GridX,
-		GridY:          cfg.GridY,
 		ForecastOffice: cfg.ForecastStationId,    // Minneapolis
 		StationID:      cfg.ObservationStationId, // St. Paul
 	}
@@ -68,7 +66,7 @@ func Main() error {
 		return err
 	}
 	if cfg.PrintToConsole == "true" {
-		PrintToConsole(*CurrentWeather)
+		PrintToConsole(*CurrentWeather, *cfg)
 	}
 	return err
 }

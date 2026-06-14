@@ -13,7 +13,7 @@ func (n NWSConfig) GetForecastData() (*ForecastWeatherData, error) {
 	var result Forecast
 
 	slog.Info("getting forecast data")
-	url := n.BaseURL + "/gridpoints/" + n.ForecastOffice + "/" + n.GridX + "," + n.GridY + "/forecast"
+	url := BaseURL + "/gridpoints/" + n.ForecastOffice + "/" + n.GridX + "," + n.GridY + "/forecast"
 	resp, err := client.CallGet(url)
 	if err != nil {
 		slog.Error("error calling weather service api", "error", err)

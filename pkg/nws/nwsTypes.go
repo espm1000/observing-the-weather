@@ -4,8 +4,9 @@ import (
 	"time"
 )
 
+const BaseURL = "https://api.weather.gov"
+
 type NWSConfig struct {
-	BaseURL        string
 	GridX          string
 	GridY          string
 	ForecastOffice string
