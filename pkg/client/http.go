@@ -20,6 +20,8 @@ func CallGet(url string) (*http.Response, error) {
 		slog.Error("error initiating get request", "error", err)
 		return nil, err
 	}
+	req.Header.Add("User-Agent", "weather@esp.m1k@gmail.com")
+	slog.Debug("setting http headers", "headers", req.Header)
 	resp, err := client.Do(req)
 	if err != nil {
 		slog.Error("error making get call", "error", err)
