@@ -19,27 +19,31 @@ func PrintToConsole(d report.CurrentWeatherData, cfg tools.Environment) {
 	fmt.Printf("Chance of Precip: %v (not implemented)\n", d.ChanceOfPrecip)
 }
 
-func setPreConfig() *tools.Environment {
+func setPreConfig() (*tools.Environment, *report.ReportConfig) {
 	cfg := tools.Environment{}
 	if err := tools.SetEnvironment(&cfg); err != nil {
 		slog.Error("error setting environment variables", "error", err)
-		return nil
+		return nil, nil
 	}
 	logger, err := tools.SetLogger(cfg)
 	if err != nil {
 		slog.Error("error setting logger", "error", err)
 	}
 	cfg.Logger = logger
+	slog.SetDefault(cfg.Logger)
 
-	return &cfg
+	rpt := setReportConfig()
+	slog.Debug("report config", "directory", rpt.Directory, "reportFile", rpt.ReportFile)
+
+	return &cfg, &rpt
 }
 
-func setReportConfig() *report.ReportConfig {
+func setReportConfig() report.ReportConfig {
 	rpt := report.ReportConfig{}
 	if err := tools.SetReportEnvironment(&rpt); err != nil {
 		slog.Error("error setting report vars", "error", err)
 	}
-	return &rpt
+	return rpt
 }
 
 func main() {
@@ -49,12 +53,9 @@ func main() {
 }
 
 func Main() error {
-	cfg := setPreConfig()
-	slog.SetDefault(cfg.Logger)
-	rpt := setReportConfig()
+	cfg, rpt := setPreConfig()
 	nws := nws.NWSConfig{
-		ForecastOffice: cfg.ForecastStationId,    // Minneapolis
-		StationID:      cfg.ObservationStationId, // St. Paul
+		StationID: cfg.ObservationStationId, // St. Paul
 	}
 	CurrentWeather, err := nws.GetCurrentData()
 	if err != nil {
