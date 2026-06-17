@@ -2,7 +2,7 @@ name: Grype It
 
 on:
   pull_request:
-  worflow_dispatch:
+  workflow_dispatch:
 
 permissions: {}
 
