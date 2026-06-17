@@ -1,4 +1,4 @@
-name: Grype It
+name: Security Jobs
 
 on:
   push:
@@ -10,6 +10,14 @@ on:
 permissions: {}
 
 jobs:
+  syft:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: write
+    steps:
+      - name: generate-sbom
+        uses: anchore/sbom-action@v0
   grype-it-up:
     runs-on: ubuntu-latest
     steps:
