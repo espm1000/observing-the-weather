@@ -18,6 +18,9 @@ jobs:
     steps:
       - name: generate-sbom
         uses: anchore/sbom-action@v0
+        with:
+          path: "."
+          artifact-name: weather-sbom.spdx
   grype-it-up:
     runs-on: ubuntu-latest
     steps:
