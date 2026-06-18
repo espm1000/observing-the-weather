@@ -10,7 +10,7 @@ on:
 permissions: {}
 
 jobs:
-  syft:
+  syftin-thru-it:
     runs-on: ubuntu-latest
     permissions:
       actions: read
@@ -28,6 +28,7 @@ jobs:
     permissions:
       contents: read
       security-events: write
+      actions: read
     container:
       image: semgrep/semgrep
     steps:
