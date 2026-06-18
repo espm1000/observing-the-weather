@@ -1,9 +1,6 @@
 name: Security Jobs
 
 on:
-  push:
-    branches:
-      - feat/grype-workflow
   pull_request:
   workflow_dispatch:
 
@@ -17,7 +14,7 @@ jobs:
       contents: write
     steps:
       - name: checkout-code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: generate-sbom
         uses: anchore/sbom-action@v0
         with:
@@ -32,13 +29,13 @@ jobs:
     container:
       image: semgrep/semgrep
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: semgrep
         run: semgrep scan --config auto --sarif --output semgrep.sarif .
         # env:
         #   SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
       - name:
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: semgrep.sarif
         if: always()
@@ -46,7 +43,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Scan Root
         uses: anchore/scan-action@v7
         with:
