@@ -15,7 +15,7 @@ env:
 
 jobs:
   build-and-push-image:
-    if: !startsWith(github.ref_name, 'chore/')
+    if: "!startsWith(github.ref_name, 'chore/')"
     runs-on: ubuntu-latest
     permissions:
       contents: read
