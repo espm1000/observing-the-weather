@@ -1,9 +1,6 @@
 name: Security Jobs
 
 on:
-  push:
-    branches:
-      - feat/grype-workflow
   pull_request:
   workflow_dispatch:
 
