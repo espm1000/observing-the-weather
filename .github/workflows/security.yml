@@ -16,10 +16,12 @@ jobs:
       actions: read
       contents: write
     steps:
+      - name: checkout-code
+        uses: actions/checkout@v4
       - name: generate-sbom
         uses: anchore/sbom-action@v0
         with:
-          path: "."
+          path: .
           artifact-name: weather-sbom.spdx
   grype-it-up:
     runs-on: ubuntu-latest
@@ -29,7 +31,7 @@ jobs:
       - name: Scan Root
         uses: anchore/scan-action@v7
         with:
-          path: "."
+          path: .
     permissions:
       contents: read
 
