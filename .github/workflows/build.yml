@@ -1,16 +1,14 @@
 name: build
 
 on:
-  push:
-    branches:
-      - main
+  release:
+    types: [published]
   pull_request:
   workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: "${{ github.repository }}"
-  APP_DIR: cmd/getweather/
 
 jobs:
   build-and-push-image:
@@ -21,9 +19,6 @@ jobs:
       packages: write
       id-token: write
     steps:
-      - name: Get Datetime
-        run: |
-          echo "TAGSTAMP=$(date +'%Y%m%d')" >> $GITHUB_ENV
       - name: Checkout Repo
         uses: actions/checkout@v7
         with:
@@ -37,13 +32,15 @@ jobs:
       - name: Build Image
         id: build-image
         run: |
-          IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.TAGSTAMP }}"
+          TAG="${{ github.event.release.tag_name }}"
+          if [[ ${TAG} == "" ]]; then TAG=$(date +"%Y%m%d"); fi
+          IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${TAG}"
           echo "IMAGE=$IMAGE" >> $GITHUB_ENV
           docker build -t "$IMAGE" .
       - name: Push it real good
         id: push
         if: github.ref == 'refs/heads/main'
         run: |
-          IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.TAGSTAMP }}"
+          IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.event.release.tag_name }}"
           docker push "${IMAGE}"
 
