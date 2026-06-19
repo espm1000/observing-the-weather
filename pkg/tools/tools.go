@@ -1,10 +1,12 @@
 package tools
 
 import (
+	"fmt"
 	"io"
 	"log/slog"
 	"os"
 	"path"
+	"strconv"
 
 	"github.com/caarlos0/env"
 	"github.com/espm1000/observing-the-weather/pkg/report"
@@ -39,13 +41,6 @@ func SetEnvironment(e *Environment) error {
 	return nil
 }
 
-func SetReportEnvironment(r *report.ReportConfig) error {
-	if err := env.Parse(r); err != nil {
-		return err
-	}
-	return nil
-}
-
 func SetLogger(options Environment) (*slog.Logger, error) {
 	if err := os.MkdirAll(options.LogDirectory, 0755); err != nil {
 		slog.Info("error creating directory")
@@ -60,4 +55,13 @@ func SetLogger(options Environment) (*slog.Logger, error) {
 	})
 	logger := slog.New(logHandler)
 	return logger, nil
+}
+
+func PrintToConsole(d report.CurrentWeatherData, cfg Environment) {
+	fmt.Printf("\nCurrent weather for %v \n", d.Timestamp)
+	fmt.Printf("Current Temp: %v F\n", strconv.FormatFloat(d.Temperature, 'f', 2, 64))
+	fmt.Printf("Current Windspeed: %v km/h\n", d.Windspeed)
+	fmt.Printf("Current Humidity: %v Percent\n", strconv.FormatFloat(d.Humidity, 'f', 2, 64))
+	fmt.Printf("Grid Coordinates\nX: %v\nY: %v\n", cfg.GridX, cfg.GridY)
+	fmt.Printf("Chance of Precip: %v (not implemented)\n", d.ChanceOfPrecip)
 }

@@ -1,25 +1,16 @@
 package main
 
 import (
-	"fmt"
 	"log/slog"
-	"strconv"
 
+	"github.com/caarlos0/env"
 	"github.com/espm1000/observing-the-weather/pkg/nws"
 	"github.com/espm1000/observing-the-weather/pkg/report"
 	"github.com/espm1000/observing-the-weather/pkg/tools"
 )
 
-func PrintToConsole(d report.CurrentWeatherData, cfg tools.Environment) {
-	fmt.Printf("\nCurrent weather for %v \n", d.Timestamp)
-	fmt.Printf("Current Temp: %v F\n", strconv.FormatFloat(d.Temperature, 'f', 2, 64))
-	fmt.Printf("Current Windspeed: %v km/h\n", d.Windspeed)
-	fmt.Printf("Current Humidity: %v Percent\n", strconv.FormatFloat(d.Humidity, 'f', 2, 64))
-	fmt.Printf("Grid Coordinates\nX: %v\nY: %v\n", cfg.GridX, cfg.GridY)
-	fmt.Printf("Chance of Precip: %v (not implemented)\n", d.ChanceOfPrecip)
-}
-
 func setPreConfig() (*tools.Environment, *report.ReportConfig) {
+	rpt := report.ReportConfig{}
 	cfg := tools.Environment{}
 	if err := tools.SetEnvironment(&cfg); err != nil {
 		slog.Error("error setting environment variables", "error", err)
@@ -31,19 +22,12 @@ func setPreConfig() (*tools.Environment, *report.ReportConfig) {
 	}
 	cfg.Logger = logger
 	slog.SetDefault(cfg.Logger)
-
-	rpt := setReportConfig()
+	if err := setReportEnvironment(&rpt); err != nil {
+		slog.Error("error setting report folders", "error", err)
+	}
 	slog.Debug("report config", "directory", rpt.Directory, "reportFile", rpt.ReportFile)
 
 	return &cfg, &rpt
-}
-
-func setReportConfig() report.ReportConfig {
-	rpt := report.ReportConfig{}
-	if err := tools.SetReportEnvironment(&rpt); err != nil {
-		slog.Error("error setting report vars", "error", err)
-	}
-	return rpt
 }
 
 func main() {
@@ -67,7 +51,14 @@ func Main() error {
 		return err
 	}
 	if cfg.PrintToConsole == "true" {
-		PrintToConsole(*CurrentWeather, *cfg)
+		tools.PrintToConsole(*CurrentWeather, *cfg)
 	}
 	return err
+}
+
+func setReportEnvironment(r *report.ReportConfig) error {
+	if err := env.Parse(r); err != nil {
+		return err
+	}
+	return nil
 }
