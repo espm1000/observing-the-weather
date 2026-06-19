@@ -5,5 +5,4 @@
 !Dockerfile
 *.tar
 currentWeather.csv
-*.log
-*.json
+logs/
