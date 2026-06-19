@@ -14,7 +14,7 @@ jobs:
       contents: write
     steps:
       - name: checkout-code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: generate-sbom
         uses: anchore/sbom-action@v0
         with:
@@ -29,7 +29,7 @@ jobs:
     container:
       image: semgrep/semgrep
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: semgrep
         run: semgrep scan --config auto --sarif --output semgrep.sarif .
         # env:
@@ -43,7 +43,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Scan Root
         uses: anchore/scan-action@v7
         with:
