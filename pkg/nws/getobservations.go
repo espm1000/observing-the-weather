@@ -33,7 +33,7 @@ func (n NWSConfig) GetCurrentData(h *client.HttpClientConfig) (*report.CurrentWe
 		slog.Error("error decoding response stream", "error", err)
 		return nil, err
 	}
-	temp_f, err := tools.ConvertCelciusToFahrenheit(currentData.Properties.Temperature.Value)
+	temp_f, err := tools.ConvertCelsiusToFahrenheit(currentData.Properties.Temperature.Value)
 	if err != nil {
 		return nil, err
 	}

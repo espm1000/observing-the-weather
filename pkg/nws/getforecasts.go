@@ -34,6 +34,10 @@ func (n NWSConfig) GetForecastData(h *client.HttpClientConfig) (*ForecastWeather
 		slog.Error("failed to read response body", "error", err)
 		return nil, err
 	}
+	if len(result.Properties.Periods) == 0 {
+		slog.Error("response data contained no weather periods", "error", err)
+		return nil, err
+	}
 	return &ForecastWeatherData{
 		Temperature:   result.Properties.Periods[0].Temperature,
 		Windspeed:     result.Properties.Periods[0].WindSpeed,

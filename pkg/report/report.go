@@ -45,6 +45,11 @@ func InitCsv(r ReportConfig) error {
 		slog.Error("error creating current report file", "error", err)
 		return err
 	}
+	defer func() {
+		if err := file.Close(); err != nil {
+			slog.Error("error closing file stream", "error", err)
+		}
+	}()
 	writer := csv.NewWriter(file)
 	defer writer.Flush()
 	if err := writer.Write(headers); err != nil {

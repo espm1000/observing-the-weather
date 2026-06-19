@@ -11,12 +11,12 @@ import (
 	"github.com/espm1000/observing-the-weather/pkg/tools"
 )
 
-func setPreConfig() (*tools.Environment, *report.ReportConfig) {
+func setPreConfig() (*tools.Environment, *report.ReportConfig, error) {
 	rpt := report.ReportConfig{}
 	cfg := tools.Environment{}
 	if err := tools.SetEnvironment(&cfg); err != nil {
 		slog.Error("error setting environment variables", "error", err)
-		return nil, nil
+		return nil, nil, err
 	}
 	logger, err := tools.SetLogger(cfg)
 	if err != nil {
@@ -29,7 +29,7 @@ func setPreConfig() (*tools.Environment, *report.ReportConfig) {
 	}
 	slog.Debug("report config", "directory", rpt.Directory, "reportFile", rpt.ReportFile)
 
-	return &cfg, &rpt
+	return &cfg, &rpt, err
 }
 
 func main() {
@@ -39,7 +39,10 @@ func main() {
 }
 
 func Main() error {
-	cfg, rpt := setPreConfig()
+	cfg, rpt, err := setPreConfig()
+	if err != nil {
+		return err
+	}
 	httpCfg := client.HttpClientConfig{
 		UserAgent: "weather-app@esp.m1k@gmail.com",
 		Timeout:   10 * time.Second,

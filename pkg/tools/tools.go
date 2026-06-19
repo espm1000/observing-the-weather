@@ -28,8 +28,8 @@ type LogConfig struct {
 	LogLevel slog.Level
 }
 
-func ConvertCelciusToFahrenheit(temp float64) (float64, error) {
-	slog.Debug("converting temp to fahrenheit", "temp_celcius", temp)
+func ConvertCelsiusToFahrenheit(temp float64) (float64, error) {
+	slog.Debug("converting temp to fahrenheit", "temp_celsius", temp)
 	converted := (temp * 9 / 5) + 32
 	return converted, nil
 }
@@ -43,10 +43,12 @@ func SetEnvironment(e *Environment) error {
 
 func SetLogger(options Environment) (*slog.Logger, error) {
 	if err := os.MkdirAll(options.LogDirectory, 0755); err != nil {
-		slog.Info("error creating directory")
+		slog.Error("error creating directory", "error", err)
+		return nil, err
 	}
-	file, err := os.OpenFile(path.Join(options.LogDirectory, "weatherlog.json"), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	file, err := os.OpenFile(path.Join(options.LogDirectory, options.LogOutput), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 	if err != nil {
+		slog.Error("error creating report folder", "error", err)
 		return nil, err
 	}
 	multiwriter := io.MultiWriter(os.Stdout, file)
