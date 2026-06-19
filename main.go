@@ -2,8 +2,10 @@ package main
 
 import (
 	"log/slog"
+	"time"
 
 	"github.com/caarlos0/env"
+	"github.com/espm1000/observing-the-weather/pkg/client"
 	"github.com/espm1000/observing-the-weather/pkg/nws"
 	"github.com/espm1000/observing-the-weather/pkg/report"
 	"github.com/espm1000/observing-the-weather/pkg/tools"
@@ -38,10 +40,14 @@ func main() {
 
 func Main() error {
 	cfg, rpt := setPreConfig()
+	httpCfg := client.HttpClientConfig{
+		UserAgent: "weather-app@esp.m1k@gmail.com",
+		Timeout:   10 * time.Second,
+	}
 	nws := nws.NWSConfig{
 		StationID: cfg.ObservationStationId, // St. Paul
 	}
-	CurrentWeather, err := nws.GetCurrentData()
+	CurrentWeather, err := nws.GetCurrentData(&httpCfg)
 	if err != nil {
 		slog.Error("error getting weather", "error", err)
 		return err

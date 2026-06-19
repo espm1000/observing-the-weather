@@ -9,12 +9,12 @@ import (
 	"github.com/espm1000/observing-the-weather/pkg/client"
 )
 
-func (n NWSConfig) GetForecastData() (*ForecastWeatherData, error) {
+func (n NWSConfig) GetForecastData(h *client.HttpClientConfig) (*ForecastWeatherData, error) {
 	var result Forecast
 
 	slog.Info("getting forecast data")
 	url := BaseURL + "/gridpoints/" + n.ForecastOffice + "/" + n.GridX + "," + n.GridY + "/forecast"
-	resp, err := client.CallGet(url)
+	resp, err := h.CallGet(url)
 	if err != nil {
 		slog.Error("error calling weather service api", "error", err)
 		return nil, err
