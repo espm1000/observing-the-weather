@@ -1,0 +1,53 @@
+name: Security Jobs
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  syftin-thru-it:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: write
+    steps:
+      - name: checkout-code
+        uses: actions/checkout@v6
+      - name: generate-sbom
+        uses: anchore/sbom-action@v0
+        with:
+          path: .
+          artifact-name: weather-sbom.spdx
+  semgreppin-it:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+    container:
+      image: semgrep/semgrep
+    steps:
+      - uses: actions/checkout@v6
+      - name: semgrep
+        run: semgrep scan --config auto --sarif --output semgrep.sarif .
+        # env:
+        #   SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
+      - name:
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: semgrep.sarif
+        if: always()
+  grype-it-up:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+      - name: Scan Root
+        uses: anchore/scan-action@v7
+        with:
+          path: .
+    permissions:
+      contents: read
+
