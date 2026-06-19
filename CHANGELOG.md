@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.1](https://github.com/espm1000/observing-the-weather/compare/v0.1.0...v0.1.1) (2026-06-19)
+
+
+### Bug Fixes
+
+* **build:** update image tagging to use release tag instead of timestamp ([#56](https://github.com/espm1000/observing-the-weather/issues/56)) ([c6ebb31](https://github.com/espm1000/observing-the-weather/commit/c6ebb31c46ba008a61cef7b9b1d5c1b69d780253))
+
 ## 0.1.0 (2026-06-19)
 
 
