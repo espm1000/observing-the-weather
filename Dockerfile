@@ -1,5 +1,5 @@
 FROM golang:tip-alpine3.23 AS app-builder
-COPY / /app
+COPY . /app
 WORKDIR /app
 RUN go build -o getweather.n .
 

@@ -11,3 +11,5 @@
 | WEATHER_LOG_DIRECTORY | Overrides default value of `logs` | `logs` |
 | WEATHER_LOG_FILE | Overrides default value of `weatherlog.json` | `weatherlog.json` |
 | WEATHER_LOG_CONSOLE | Prints weather summary to console | `"false"` |
+| WEATHER_GRID_X | Sets Forecast Latitude Grid Coordinate | 102 |
+| WEATHER_GRID_Y | Sets Forecast Longitude Grid Coordinate | 84 |
