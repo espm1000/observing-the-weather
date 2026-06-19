@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.2](https://github.com/espm1000/observing-the-weather/compare/v0.1.1...v0.1.2) (2026-06-19)
+
+
+### Bug Fixes
+
+* **build:** update image push condition to trigger on release events ([#58](https://github.com/espm1000/observing-the-weather/issues/58)) ([f6fb345](https://github.com/espm1000/observing-the-weather/commit/f6fb3456b34db0313dd141e4bc5d58571b435020))
+
 ## [0.1.1](https://github.com/espm1000/observing-the-weather/compare/v0.1.0...v0.1.1) (2026-06-19)
 
 
