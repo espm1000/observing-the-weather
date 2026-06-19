@@ -9,7 +9,6 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  TAG: "20260607-1"
   IMAGE_NAME: "${{ github.repository }}"
   APP_DIR: cmd/getweather/
 
@@ -22,6 +21,9 @@ jobs:
       packages: write
       id-token: write
     steps:
+      - name: Get Datetime
+        run: |
+          echo "TAGSTAMP=$(date +'%Y%m%d')" >> $GITHUB_ENV
       - name: Checkout Repo
         uses: actions/checkout@v6
         with:
@@ -35,12 +37,13 @@ jobs:
       - name: Build Image
         id: build-image
         run: |
-          IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.TAG }}"
+          IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.TAGSTAMP }}"
           echo "IMAGE=$IMAGE" >> $GITHUB_ENV
           docker build -t "$IMAGE" .
       - name: Push it real good
         id: push
+        if: github.ref == 'refs/heads/main'
         run: |
-          IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.TAG }}"
+          IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.TAGSTAMP }}"
           docker push "${IMAGE}"
 
