@@ -34,10 +34,10 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: semgrep
-        run: semgrep ci
+        run: semgrep ci --sarif --output semgrep.sarif
         env:
           SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
-      - name:
+      - name: upload-sarif
         uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: semgrep.sarif
