@@ -10,4 +10,6 @@ FROM scratch
 COPY --from=app-builder /app/getweather.n /
 COPY --from=cert-builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 WORKDIR /
+# Arbitrary user declaration
+USER 10001
 CMD ["./getweather.n"]
