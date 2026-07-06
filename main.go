@@ -1,7 +1,9 @@
 package main
 
 import (
+	"log"
 	"log/slog"
+	"net/http"
 	"time"
 
 	"github.com/caarlos0/env"
@@ -33,9 +35,20 @@ func setPreConfig() (*tools.Environment, *report.ReportConfig, error) {
 }
 
 func main() {
-	if err := Main(); err != nil {
-		panic(err)
+	// if err := Main(); err != nil {
+	// 	panic(err)
+	// }
+	startWebServer()
+}
+
+func startWebServer() error {
+	log.Println("starting http server...")
+	http.HandleFunc("/data/", report.CsvHandler("test.csv"))
+	if err := http.ListenAndServe(":5050", nil); err != nil {
+		log.Fatal("server failed to start: ", err)
+		return err
 	}
+	return nil
 }
 
 func Main() error {
