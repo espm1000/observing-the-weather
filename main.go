@@ -20,6 +20,7 @@ func setPreConfig() (*tools.Environment, *report.ReportConfig, error) {
 		slog.Error("error setting environment variables", "error", err)
 		return nil, nil, err
 	}
+
 	logger, err := tools.SetLogger(cfg)
 	if err != nil {
 		slog.Error("error setting logger", "error", err)
@@ -39,13 +40,15 @@ func main() {
 	// 	panic(err)
 	// }
 	env, _, _ := setPreConfig()
-	GetNCEIData(env.NCEIToken)
-	// startWebServer()
+	if err := getNCEIWeather(env.NCEIToken); err != nil {
+		slog.Error("error getting ncei data", "error", err)
+	}
+	startWebServer()
 }
 
-func GetNCEIData(token string) error {
+func getNCEIWeather(token string) error {
 	_, err := report.NCEIReport(report.Params{
-		StartDate:       "2026-07-08",
+		StartDate:       "2025-07-08",
 		EndDate:         "2026-07-08",
 		Units:           "standard",
 		Dataset:         "GHCND",
@@ -62,7 +65,7 @@ func GetNCEIData(token string) error {
 
 func startWebServer() error {
 	log.Println("starting http server...")
-	http.HandleFunc("/data/", report.CsvHandler("test.csv"))
+	http.HandleFunc("/data/", report.CsvHandler("ncei.csv"))
 	if err := http.ListenAndServe(":5050", nil); err != nil {
 		log.Fatal("server failed to start: ", err)
 		return err
