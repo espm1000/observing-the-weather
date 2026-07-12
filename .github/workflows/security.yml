@@ -67,4 +67,3 @@ jobs:
           path: grype.sarif
     permissions:
       contents: read
-      security-events: write
