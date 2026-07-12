@@ -20,6 +20,7 @@ type Environment struct {
 	PrintToConsole       string `env:"WEATHER_LOG_CONSOLE" envDefault:"false"`
 	GridX                string `env:"WEATHER_GRID_X" envDefault:"102"`
 	GridY                string `env:"WEATHER_GRID_Y" envDefault:"84"`
+	NCEIToken            string `env:"NCEI_TOKEN"`
 	LogLevel             slog.Level
 	Logger               *slog.Logger
 }
