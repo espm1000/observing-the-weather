@@ -4,10 +4,12 @@ import (
 	"log"
 	"log/slog"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/caarlos0/env"
 	"github.com/espm1000/observing-the-weather/pkg/client"
+	"github.com/espm1000/observing-the-weather/pkg/ncei"
 	"github.com/espm1000/observing-the-weather/pkg/nws"
 	"github.com/espm1000/observing-the-weather/pkg/report"
 	"github.com/espm1000/observing-the-weather/pkg/tools"
@@ -38,7 +40,26 @@ func main() {
 	// if err := Main(); err != nil {
 	// 	panic(err)
 	// }
-	startWebServer()
+	token := os.Getenv("NCEI_TOKEN")
+	GetNCEIData(token)
+	// startWebServer()
+}
+
+func GetNCEIData(token string) error {
+	_, err := ncei.NewReport(ncei.Params{
+		StartDate: "2026-07-01",
+		EndDate:   "2026-07-07",
+		Format:    "json",
+		Units:     "standard",
+		Dataset:   "GHCND",
+		StationId: "USW00014922",
+		Limit:     "1000",
+	}, token)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func startWebServer() error {
