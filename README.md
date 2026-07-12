@@ -13,3 +13,4 @@
 | WEATHER_LOG_CONSOLE | Prints weather summary to console | `"false"` |
 | WEATHER_GRID_X | Sets Forecast Latitude Grid Coordinate | 102 |
 | WEATHER_GRID_Y | Sets Forecast Longitude Grid Coordinate | 84 |
+| WEATHER_NWS_ENABLED | Setting to `false` will toggle the NWS capture off. | Enabled |
