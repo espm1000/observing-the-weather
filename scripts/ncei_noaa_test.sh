@@ -5,7 +5,7 @@ set -e
 
 # Documentation: https://www.ncei.noaa.gov/cdo-web/webservices/v2#gettingStarted
 
-TOKEN='PvFzaqRoYUAHGTdthQionfiAzuxdRfEN'
+TOKEN="${NCEI_TOKEN:?Error: Required NCEI token.}"
 STATION='USW00014922' # KMSP
 BASE_URL="https://www.ncei.noaa.gov/cdo-web/api/v2"
 DATA_ENDPOINT="data"
