@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path"
 	"strconv"
 
 	"github.com/espm1000/observing-the-weather/pkg/ncei"
@@ -23,27 +24,28 @@ type Params struct {
 	IncludeMetadata string
 }
 
-type Report struct {
-	header   []string
-	datarows ncei.WeatherData
-}
-
-func NCEIReport(p Params, token string) (*Report, error) {
+func NCEIReport(p Params, token string, rc *ReportConfig) error {
+	rpt := ReportConfig{
+		Directory:  rc.Directory,
+		NCEIReport: rc.NCEIReport,
+	}
+	log.Println("report directory: ", rc.Directory)
+	log.Println("report file: ", rc.NCEIReport)
 	log.Println("generating ncei weather report")
 	if token == "" {
-		return nil, errors.New("no ncei token")
+		return errors.New("no ncei token")
 	}
 	rd, err := getRawData(p, token)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	report, err := buildReport(rd)
-	if err != nil {
-		return nil, err
+	if err := rpt.buildReport(rd); err != nil {
+		log.Println("error building report: ", err)
+		return err
 	}
 
-	return report, nil
+	return nil
 }
 
 func BuildNCEI(token string) *ncei.Config {
@@ -89,16 +91,12 @@ func getRawData(p Params, nceiToken string) (*ncei.WeatherResponse, error) {
 	return &rawWeather, nil
 }
 
-func buildReport(w *ncei.WeatherResponse) (*Report, error) {
+func (r *ReportConfig) buildReport(w *ncei.WeatherResponse) error {
 	header := []string{"date", "location", "maxTemp", "minTemp", "precip"}
-	report := Report{
-		header:   header,
-		datarows: ncei.WeatherData{},
-	}
 
-	file, err := os.Create("ncei.csv")
+	file, err := os.Create(path.Join(r.Directory, r.NCEIReport))
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	defer file.Close()
@@ -108,7 +106,7 @@ func buildReport(w *ncei.WeatherResponse) (*Report, error) {
 
 	if err := writer.Write(header); err != nil {
 		log.Println("error writing header: ", err)
-		return nil, err
+		return err
 	}
 
 	// AI Assisted: Getting all data from the response and converting it to the WeatherData struct in a loop.
@@ -144,7 +142,7 @@ func buildReport(w *ncei.WeatherResponse) (*Report, error) {
 		}
 	}
 
-	return &report, nil
+	return nil
 }
 
 func convertFtoS(v float64) string {

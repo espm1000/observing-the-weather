@@ -21,6 +21,7 @@ type Environment struct {
 	GridX                string `env:"WEATHER_GRID_X" envDefault:"102"`
 	GridY                string `env:"WEATHER_GRID_Y" envDefault:"84"`
 	NCEIToken            string `env:"NCEI_TOKEN"`
+	NWSEnabled           string `env:"WEATHER_NWS_ENABLED"`
 	LogLevel             slog.Level
 	Logger               *slog.Logger
 }

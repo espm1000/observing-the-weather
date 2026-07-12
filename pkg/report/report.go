@@ -12,7 +12,8 @@ import (
 
 type ReportConfig struct {
 	Directory  string `env:"WEATHER_REPORT_DIR" envDefault:"/data"`
-	ReportFile string `env:"WEATHER_REPORT_FILE" envDefault:"currentWeather.csv"`
+	NWSReport  string `env:"WEATHER_REPORT_NWS_FILE" envDefault:"currentWeather.csv"`
+	NCEIReport string `env:"WEATHER_REPORT_NCEI_FILE" envDefault:"nceiWeather.csv"`
 }
 
 type CurrentWeatherData struct {
@@ -35,12 +36,12 @@ func InitCsv(r ReportConfig) error {
 			}
 		}
 	}
-	_, err := os.Stat(path.Join(r.Directory, r.ReportFile))
+	_, err := os.Stat(path.Join(r.Directory, r.NWSReport))
 	if err == nil {
 		slog.Debug("report file exists")
 		return err
 	}
-	file, err := os.Create(path.Join(r.Directory, r.ReportFile))
+	file, err := os.Create(path.Join(r.Directory, r.NWSReport))
 	if err != nil {
 		slog.Error("error creating current report file", "error", err)
 		return err
@@ -66,7 +67,7 @@ func WriteCsv(r ReportConfig, d CurrentWeatherData) error {
 		slog.Error("error initializing report", "error", err)
 		return err
 	}
-	report, err := os.OpenFile(path.Join(r.Directory, r.ReportFile), os.O_APPEND|os.O_WRONLY, 0644)
+	report, err := os.OpenFile(path.Join(r.Directory, r.NWSReport), os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
 		slog.Error("error writing report", "error", err)
 		return err
@@ -98,6 +99,6 @@ func WriteCsv(r ReportConfig, d CurrentWeatherData) error {
 			return err
 		}
 	}
-	slog.Info("successfully wrote report", "reportPath", path.Join(r.Directory, r.ReportFile))
+	slog.Info("successfully wrote report", "reportPath", path.Join(r.Directory, r.NWSReport))
 	return nil
 }
