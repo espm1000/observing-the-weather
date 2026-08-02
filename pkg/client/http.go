@@ -30,7 +30,6 @@ func (h *HttpClientConfig) CallGet(url string) (*http.Response, error) {
 		return nil, err
 	}
 	req.Header.Add("User-Agent", h.UserAgent)
-	slog.Debug("setting http headers", "headers", req.Header)
 	resp, err := h.client.Do(req)
 	if err != nil {
 		slog.Error("error making get call", "error", err)
