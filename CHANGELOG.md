@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.3](https://github.com/espm1000/observing-the-weather/compare/v0.1.2...v0.1.3) (2026-08-02)
+
+
+### Bug Fixes
+
+* remove debug line that prints headers ([#69](https://github.com/espm1000/observing-the-weather/issues/69)) ([2c548f5](https://github.com/espm1000/observing-the-weather/commit/2c548f51ce04f8dc6545330b5501a757bda7a983))
+
 ## [0.1.2](https://github.com/espm1000/observing-the-weather/compare/v0.1.1...v0.1.2) (2026-06-19)
 
 
