@@ -10,10 +10,6 @@ on:
         default: false
         required: false
   workflow_call:
-    secrets:
-      RELEASE_PLEASE_TOKEN:
-        required: true
-        description: "Release Please token"
     inputs:
       release:
         description: 'Tag the image with the release-please manifest version instead of dev.'
@@ -32,6 +28,7 @@ jobs:
       contents: read
       packages: write
       id-token: write
+      security-events: write
     steps:
       - name: Checkout Repo
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -75,7 +72,7 @@ jobs:
         uses: anchore/scan-action@27805bf3b4e84b4a5c980df22ed233c00390a439 # v7.4.2
         with:
           image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}
-          fail-build: ${{ inputs.release != true }}
+          fail-build: true
           severity-cutoff: high
           output-format: sarif
       - name: Push it real good
@@ -86,5 +83,6 @@ jobs:
           docker push "${IMAGE}"
       - name: Upload Grype Sarif
         uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        if: ${{ !cancelled() && hashFiles('grype_results.json') != '' }}
         with:
           sarif_file: ${{ steps.scan.outputs.sarif }}

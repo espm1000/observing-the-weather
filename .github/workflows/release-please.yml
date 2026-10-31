@@ -28,12 +28,11 @@ jobs:
         name: build-release-image
         needs: release-please
         if: ${{ needs.release-please.outputs.weather-released == 'true' }}
-        secrets: 
-          RELEASE_PLEASE_TOKEN: ${{ secrets.RELEASE_PLEASE_TOKEN }}
         permissions:
             contents: read
             packages: write
             id-token: write
+            security-events: write
         uses: ./.github/workflows/build.yml
         with:
             release: true
