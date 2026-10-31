@@ -10,6 +10,10 @@ on:
         default: false
         required: false
   workflow_call:
+    secrets:
+      RELEASE_PLEASE_TOKEN:
+        required: true
+        description: "Release Please token"
     inputs:
       release:
         description: 'Tag the image with the release-please manifest version instead of dev.'
