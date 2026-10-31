@@ -1,10 +1,21 @@
-name: Build Image
+name: Build
 
 on:
-  release:
-    types: [published]
   pull_request:
   workflow_dispatch:
+    inputs:
+      push-to-ghcr:
+        description: 'Push build to GHCR if not on main.'
+        type: boolean
+        default: false
+        required: false
+  workflow_call:
+    inputs:
+      release:
+        description: 'Tag the image with the release-please manifest version instead of dev.'
+        type: boolean
+        default: false
+        required: false
 
 env:
   REGISTRY: ghcr.io
@@ -12,8 +23,7 @@ env:
 
 jobs:
   build-and-push-image:
-    if: ${{ !startsWith(github.head_ref || github.ref_name, 'chore') }}
-    runs-on: ubuntu-latest
+    runs-on: k3s-runners
     permissions:
       contents: read
       packages: write
@@ -21,26 +31,65 @@ jobs:
     steps:
       - name: Checkout Repo
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0
+      - name: Get image tag
+        id: version
+        env:
+          RELEASE: ${{ inputs.release == true }}
+        run: |
+          if [[ "${RELEASE}" != "true" ]]; then
+            echo "version=dev" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          VERSION=$(jq -er --arg pkg "${APP_DIR}" '.[$pkg]' .release-please-manifest.json)
+          if [[ ! "${VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::Invalid version '${VERSION}' for ${APP_DIR} in .release-please-manifest.json"
+            exit 1
+          fi
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
       - name: Login to GHCR
         uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Get Docker tags
+        id: meta
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
       - name: Build Image
         id: build-image
         run: |
-          TAG="${{ github.event.release.tag_name }}"
-          if [[ ${TAG} == "" ]]; then TAG=$(date +"%Y%m%d"); fi
-          IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${TAG}"
-          echo "IMAGE=$IMAGE" >> $GITHUB_ENV
-          docker build -t "$IMAGE" .
+          IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}"
+          docker build -t "${IMAGE}" .
+      - name: Generate SBOM
+        id: sbom
+        uses: anchore/sbom-action@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
+        with:
+          image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}
+          format: cyclonedx-json
+          artifact-name: ${{ env.IMAGE_NAME }}_sbom.json
+      - name: Scan Image
+        id: scan
+        uses: anchore/scan-action@27805bf3b4e84b4a5c980df22ed233c00390a439 # v7.4.2
+        with:
+          image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.APP_DIR }}_${{ steps.version.outputs.version }}
+          fail-build: ${{ inputs.release != true }}
+          severity-cutoff: high
+          output-format: cyclonedx-json
+          output-file: grype_results.json
       - name: Push it real good
         id: push
-        if: github.event_name == 'release'
+        if: ${{ inputs.push-to-ghcr == true || github.ref == 'refs/heads/main' }}
         run: |
-          IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.event.release.tag_name }}"
+          IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}"
           docker push "${IMAGE}"
-
+      - name: Send to SecObserve
+        if: ${{ !cancelled() && hashFiles('grype_results.json') != '' }}
+        uses: SecObserve/secobserve_actions_templates/actions/upload_observations@d7e9250f6180fbad1c6b4ea712db8b2712fd4d2e # v2026_10
+        with:
+          so_api_token: ${{ secrets.SO_API_TOKEN }}
+          so_file_name: grype_results.json
+          so_product_name: ${{ vars.SO_PRODUCT_NAME }}
+          so_api_base_url: ${{ secrets.SO_API_BASE_URL }}
+          so_branch_name: ${{ github.head_ref || github.ref_name }}
