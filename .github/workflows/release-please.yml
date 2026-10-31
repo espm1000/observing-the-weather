@@ -16,8 +16,22 @@ jobs:
             issues: write
         steps:
             - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+              id: release
               with:
                 release-type: go
                 token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
                 config-file: release-please-config.json
                 manifest-file: .release-please-manifest.json
+        outputs:
+           weather-released: ${{ steps.release.outputs['release_created'] }}
+    build-weather:
+        name: build-release-image
+        needs: release-please
+        if: ${{ needs.release-please.outputs.weather-released == 'true' }}
+        permissions:
+            contents: read
+            packages: write
+            security-events: write
+        uses: ./.github/workflows/build.yml
+        with:
+            release: true

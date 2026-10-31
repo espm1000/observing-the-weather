@@ -1,10 +1,21 @@
-name: Build Image
+name: Build
 
 on:
-  release:
-    types: [published]
   pull_request:
   workflow_dispatch:
+    inputs:
+      push-to-ghcr:
+        description: 'Push build to GHCR if not on main.'
+        type: boolean
+        default: false
+        required: false
+  workflow_call:
+    inputs:
+      release:
+        description: 'Tag the image with the release-please manifest version instead of dev.'
+        type: boolean
+        default: false
+        required: false
 
 env:
   REGISTRY: ghcr.io
@@ -12,17 +23,31 @@ env:
 
 jobs:
   build-and-push-image:
-    if: ${{ !startsWith(github.head_ref || github.ref_name, 'chore') }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
-      id-token: write
+      security-events: write
     steps:
       - name: Checkout Repo
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0
+      - name: Get image tag
+        id: version
+        env:
+          RELEASE: ${{ inputs.release == true }}
+          # Package path as release-please writes it in the manifest.
+          PACKAGE: "."
+        run: |
+          if [[ "${RELEASE}" != "true" ]]; then
+            echo "version=dev" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          VERSION=$(jq -r --arg pkg "${PACKAGE}" '.[$pkg] // ""' .release-please-manifest.json)
+          if [[ ! "${VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::Invalid version '${VERSION}' for ${PACKAGE} in .release-please-manifest.json"
+            exit 1
+          fi
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
       - name: Login to GHCR
         uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
         with:
@@ -32,15 +57,31 @@ jobs:
       - name: Build Image
         id: build-image
         run: |
-          TAG="${{ github.event.release.tag_name }}"
-          if [[ ${TAG} == "" ]]; then TAG=$(date +"%Y%m%d"); fi
-          IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${TAG}"
-          echo "IMAGE=$IMAGE" >> $GITHUB_ENV
-          docker build -t "$IMAGE" .
+          IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}"
+          docker build -t "${IMAGE}" .
+      - name: Generate SBOM
+        id: sbom
+        uses: anchore/sbom-action@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
+        with:
+          image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}
+          format: cyclonedx-json
+          artifact-name: weather_sbom.json
+      - name: Scan Image
+        id: scan
+        uses: anchore/scan-action@27805bf3b4e84b4a5c980df22ed233c00390a439 # v7.4.2
+        with:
+          image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}
+          fail-build: true
+          severity-cutoff: high
+          output-format: sarif
       - name: Push it real good
         id: push
-        if: github.event_name == 'release'
+        if: ${{ inputs.push-to-ghcr == true || github.ref == 'refs/heads/main' }}
         run: |
-          IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.event.release.tag_name }}"
+          IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}"
           docker push "${IMAGE}"
-
+      - name: Upload Grype Sarif
+        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        if: ${{ !cancelled() && steps.scan.outputs.sarif != '' }}
+        with:
+          sarif_file: ${{ steps.scan.outputs.sarif }}

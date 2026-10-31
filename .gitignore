@@ -6,3 +6,4 @@
 *.tar
 currentWeather.csv
 logs/
+.scratch/
