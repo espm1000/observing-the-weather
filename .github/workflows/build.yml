@@ -35,14 +35,16 @@ jobs:
         id: version
         env:
           RELEASE: ${{ inputs.release == true }}
+          # Package path as release-please writes it in the manifest.
+          PACKAGE: "."
         run: |
           if [[ "${RELEASE}" != "true" ]]; then
             echo "version=dev" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          VERSION=$(jq -er --arg pkg "${APP_DIR}" '.[$pkg]' .release-please-manifest.json)
+          VERSION=$(jq -r --arg pkg "${PACKAGE}" '.[$pkg] // ""' .release-please-manifest.json)
           if [[ ! "${VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
-            echo "::error::Invalid version '${VERSION}' for ${APP_DIR} in .release-please-manifest.json"
+            echo "::error::Invalid version '${VERSION}' for ${PACKAGE} in .release-please-manifest.json"
             exit 1
           fi
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
@@ -52,11 +54,6 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Get Docker tags
-        id: meta
-        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
       - name: Build Image
         id: build-image
         run: |
@@ -68,12 +65,12 @@ jobs:
         with:
           image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}
           format: cyclonedx-json
-          artifact-name: ${{ env.IMAGE_NAME }}_sbom.json
+          artifact-name: weather_sbom.json
       - name: Scan Image
         id: scan
         uses: anchore/scan-action@27805bf3b4e84b4a5c980df22ed233c00390a439 # v7.4.2
         with:
-          image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.APP_DIR }}_${{ steps.version.outputs.version }}
+          image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}
           fail-build: ${{ inputs.release != true }}
           severity-cutoff: high
           output-format: cyclonedx-json
