@@ -73,8 +73,7 @@ jobs:
           image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}
           fail-build: ${{ inputs.release != true }}
           severity-cutoff: high
-          output-format: cyclonedx-json
-          output-file: grype_results.json
+          output-format: sarif
       - name: Push it real good
         id: push
         if: ${{ inputs.push-to-ghcr == true || github.ref == 'refs/heads/main' }}
